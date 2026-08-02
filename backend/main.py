@@ -2,7 +2,7 @@ import os
 from typing import List, Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -52,6 +52,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Utility Handlers to eliminate browser 404 console noise
+FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎓</text></svg>"""
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_endpoint():
+    return Response(content=FAVICON_SVG, media_type="image/svg+xml")
+
+@app.get("/.well-known/appspecific/com.chrome.devtools.json", include_in_schema=False)
+async def chrome_devtools_json_endpoint():
+    return Response(status_code=204)
 
 
 # --- Student Endpoints ---
@@ -175,7 +186,22 @@ def create_course_endpoint(course: CourseCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cannot enroll course: Student with ID {course.student_id} does not exist.",
         )
-    return crud.create_course(db=db, course=course)
+    
+    # Enforce: one student with different courses, NOT duplicate same course for same student
+    existing_enrollment = crud.get_student_course_by_name(db, course.student_id, course.course_name)
+    if existing_enrollment:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Student '{student.name}' is already enrolled in '{course.course_name}'. A student cannot be enrolled in the same course twice.",
+        )
+    try:
+        return crud.create_course(db=db, course=course)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Student '{student.name}' is already enrolled in '{course.course_name}'.",
+        )
 
 @app.get(
     "/courses/",

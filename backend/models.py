@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -23,6 +23,7 @@ class Course(Base):
 
     __table_args__ = (
         CheckConstraint("credits >= 1 AND credits <= 6", name="check_course_credits"),
+        UniqueConstraint("student_id", "course_name", name="uix_student_course_enrollment"),
     )
 
     # Bi-directional relationship to Student

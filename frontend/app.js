@@ -27,10 +27,14 @@ const openCourseModalBtn = document.getElementById("open-course-modal-btn");
 const studentModal = document.getElementById("student-modal");
 const newCourseModal = document.getElementById("new-course-modal");
 const courseModal = document.getElementById("course-modal");
+const confirmationModal = document.getElementById("confirmation-modal");
 
 const closeStudentModalBtn = document.getElementById("close-student-modal");
 const closeNewCourseModalBtn = document.getElementById("close-new-course-modal");
 const closeCourseModalBtn = document.getElementById("close-course-modal");
+const closeConfirmModalBtn = document.getElementById("close-confirm-modal");
+const confirmOkBtn = document.getElementById("confirm-ok-btn");
+const confirmModalMessage = document.getElementById("confirm-modal-message");
 
 // State
 let allStudents = [];
@@ -64,7 +68,7 @@ const courseCreditsMap = {
 };
 
 /**
- * Display on-page error banner with custom plain-language message.
+ * Display main on-page error banner.
  */
 function showError(message) {
     if (errorMessageEl && errorBanner) {
@@ -74,7 +78,7 @@ function showError(message) {
 }
 
 /**
- * Hide on-page error banner.
+ * Hide main on-page error banner.
  */
 function hideError() {
     if (errorBanner) {
@@ -83,16 +87,51 @@ function hideError() {
 }
 
 /**
+ * Display errors directly inside the active modal popup.
+ */
+function showModalError(modalEl, message) {
+    if (modalEl) {
+        const errorDiv = modalEl.querySelector(".modal-error-banner");
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.classList.remove("hidden");
+        }
+    }
+}
+
+/**
+ * Hide error banners in all modal dialogs.
+ */
+function hideModalErrors() {
+    document.querySelectorAll(".modal-error-banner").forEach(el => {
+        el.textContent = "";
+        el.classList.add("hidden");
+    });
+}
+
+/**
+ * Display confirmation success modal dialog with OK message button.
+ */
+function showConfirmation(message) {
+    if (confirmModalMessage && confirmationModal) {
+        confirmModalMessage.textContent = message;
+        openModal(confirmationModal);
+    }
+}
+
+/**
  * Helper functions to open and close modals.
  */
 function openModal(modalEl) {
     if (modalEl) {
+        hideModalErrors();
         modalEl.classList.remove("hidden");
     }
 }
 
 function closeModal(modalEl) {
     if (modalEl) {
+        hideModalErrors();
         modalEl.classList.add("hidden");
     }
 }
@@ -135,11 +174,12 @@ async function fetchAPI(url, options = {}) {
         return await response.json();
     } catch (error) {
         if (error.name === "TypeError" && error.message.includes("fetch")) {
-            showError("Could not reach the StudyTrack backend. Please ensure the backend server is running.");
+            const sysMsg = "Could not reach the StudyTrack backend. Please ensure the backend server is running.";
+            showError(sysMsg);
+            throw new Error(sysMsg);
         } else {
-            showError(error.message || "An unexpected error occurred.");
+            throw error;
         }
-        throw error;
     }
 }
 
@@ -154,7 +194,7 @@ function updateMapModalDropdowns(students) {
         students.forEach(s => {
             const option = document.createElement("option");
             option.value = s.id;
-            option.textContent = `${s.name} (ID: #${s.id})`;
+            option.textContent = s.name;
             courseStudentIdSelect.appendChild(option);
         });
         if (currentSelected) courseStudentIdSelect.value = currentSelected;
@@ -276,7 +316,7 @@ function createStudentCardElement(student) {
             chip.className = "course-chip";
             chip.innerHTML = `
                 <span>${c.course_name} (${c.credits} cr)</span>
-                <button class="remove-course-btn" data-course-id="${c.id}" data-student-id="${student.id}" title="Remove course">&times;</button>
+                <button class="remove-course-btn" data-course-id="${c.id}" data-course-name="${c.course_name}" data-student-name="${student.name}" title="Remove course">&times;</button>
             `;
             courseTags.appendChild(chip);
         });
@@ -298,6 +338,7 @@ function createStudentCardElement(student) {
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "btn btn-danger btn-sm delete-btn btn-block";
     deleteBtn.setAttribute("data-id", student.id);
+    deleteBtn.setAttribute("data-name", student.name);
     deleteBtn.textContent = "🗑️ Delete Student";
 
     cardActions.appendChild(deleteBtn);
@@ -386,11 +427,13 @@ rosterList.addEventListener("click", async (event) => {
                 ageLabel.textContent = `🎂 Age: ${updatedStudent.age}`;
             }
             ageInput.value = updatedStudent.age;
+            showConfirmation(`Age for ${updatedStudent.name} updated to ${updatedStudent.age}.`);
         } catch (e) {
-            console.error("Failed to update age:", e);
+            showError(e.message || "Failed to update student age.");
         }
     } else if (deleteBtn) {
         const studentId = deleteBtn.getAttribute("data-id");
+        const studentName = deleteBtn.getAttribute("data-name") || "Student";
         const card = deleteBtn.closest(".student-card");
 
         try {
@@ -400,11 +443,14 @@ rosterList.addEventListener("click", async (event) => {
 
             card.remove();
             await loadRoster(minAgeInput ? minAgeInput.value : null);
+            showConfirmation(`${studentName} is deleted.`);
         } catch (e) {
-            console.error("Failed to delete student:", e);
+            showError(e.message || "Failed to delete student.");
         }
     } else if (removeCourseBtn) {
         const courseId = removeCourseBtn.getAttribute("data-course-id");
+        const courseName = removeCourseBtn.getAttribute("data-course-name") || "Course";
+        const studentName = removeCourseBtn.getAttribute("data-student-name") || "student";
         
         try {
             await fetchAPI(`/courses/${courseId}`, {
@@ -412,8 +458,9 @@ rosterList.addEventListener("click", async (event) => {
             });
 
             await loadRoster(minAgeInput ? minAgeInput.value : null);
+            showConfirmation(`Course '${courseName}' has been removed from ${studentName}.`);
         } catch (e) {
-            console.error("Failed to delete course:", e);
+            showError(e.message || "Failed to delete course.");
         }
     }
 });
@@ -423,6 +470,7 @@ rosterList.addEventListener("click", async (event) => {
  */
 studentForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    hideModalErrors();
 
     const nameInput = document.getElementById("student-name");
     const emailInput = document.getElementById("student-email");
@@ -432,61 +480,89 @@ studentForm.addEventListener("submit", async (event) => {
     const email = emailInput.value.trim();
     const age = parseInt(ageInput.value, 10);
 
-    if (!name || !email || isNaN(age)) {
-        showError("Please fill in all required fields accurately.");
+    // Front-end validations matching Pydantic custom validators
+    if (!name) {
+        showModalError(studentModal, "Student full name is required.");
+        return;
+    }
+
+    if (!email || !email.includes("@")) {
+        showModalError(studentModal, "Invalid email format: Must contain an '@' character.");
+        return;
+    }
+
+    if (isNaN(age) || age <= 0) {
+        showModalError(studentModal, "Age must be a positive integer greater than 0.");
         return;
     }
 
     try {
-        await fetchAPI("/students/", {
+        const createdStudent = await fetchAPI("/students/", {
             method: "POST",
             body: JSON.stringify({ name, email, age }),
         });
 
-        // Reload roster to refresh list & student dropdown
-        await loadRoster();
+        // Remove empty state element if present
+        const emptyState = rosterList.querySelector(".empty-state");
+        if (emptyState) emptyState.remove();
 
-        // Reset form & close modal
+        // Dynamically create & append new card to DOM using document.createElement + appendChild
+        const newCardEl = createStudentCardElement(createdStudent);
+        rosterList.appendChild(newCardEl);
+
+        // Update state and student dropdown for course mapping
+        allStudents.push(createdStudent);
+        updateMapModalDropdowns(allStudents);
+        if (courseStudentIdSelect && createdStudent && createdStudent.id) {
+            courseStudentIdSelect.value = createdStudent.id;
+        }
+
+        // Update badge count
+        if (totalStudentsBadge) {
+            totalStudentsBadge.textContent = `Total Students: ${allStudents.length}`;
+        }
+
+        // Reset form & close modal on success
         studentForm.reset();
         closeModal(studentModal);
+
+        // Show confirmation OK popup
+        showConfirmation(`Student '${createdStudent.name}' created successfully.`);
     } catch (e) {
-        console.error("Failed to add student:", e);
+        // Display error directly inside student modal popup
+        showModalError(studentModal, e.message || "Failed to create student.");
     }
 });
 
 /**
- * Form 2: #new-course-form Submit Handler (Create New Course Definition).
+ * Form 2: #new-course-form Submit Handler (Create New Course Title - Only Title Input).
  */
 if (newCourseForm) {
     newCourseForm.addEventListener("submit", (event) => {
         event.preventDefault();
+        hideModalErrors();
 
         const titleInput = document.getElementById("new-course-title");
-        const creditsInput = document.getElementById("new-course-default-credits");
-
         const title = titleInput.value.trim();
-        const credits = parseInt(creditsInput.value, 10);
 
-        if (!title || isNaN(credits)) {
-            showError("Please enter a valid course title and credits.");
+        if (!title) {
+            showModalError(newCourseModal, "Course title is required.");
             return;
         }
 
-        if (credits < 1 || credits > 6) {
-            showError("Credits must be between 1 and 6.");
-            return;
-        }
-
-        // Add course title to available set and credits map
+        // Add course title to available set with default 3 credits
         availableCoursesSet.add(title);
-        courseCreditsMap[title] = credits;
+        courseCreditsMap[title] = 3;
 
         // Re-populate Course Dropdown in Map Course modal
         updateMapModalDropdowns(allStudents);
 
-        // Reset form & close modal
+        // Reset form & close modal on success
         newCourseForm.reset();
         closeModal(newCourseModal);
+
+        // Show confirmation OK popup
+        showConfirmation(`Course '${title}' created successfully.`);
     });
 }
 
@@ -496,20 +572,33 @@ if (newCourseForm) {
 if (courseForm) {
     courseForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        hideModalErrors();
 
-        const studentId = parseInt(courseStudentIdSelect.value, 10);
+        const studentIdVal = courseStudentIdSelect.value;
         const courseName = courseDropdownSelect.value.trim();
-        const credits = parseInt(courseCreditsInput.value, 10);
+        const creditsVal = courseCreditsInput.value;
 
-        if (isNaN(studentId) || !courseName || isNaN(credits)) {
-            showError("Please select both a student and a course from the dropdowns and specify credits.");
+        if (!studentIdVal) {
+            showModalError(courseModal, "Please select a student from the dropdown.");
             return;
         }
 
-        if (credits < 1 || credits > 6) {
-            showError("Course credits must be between 1 and 6.");
+        if (!courseName) {
+            showModalError(courseModal, "Please select a course title from the dropdown.");
             return;
         }
+
+        const studentId = parseInt(studentIdVal, 10);
+        const credits = parseInt(creditsVal, 10);
+
+        if (isNaN(credits) || credits < 1 || credits > 6) {
+            showModalError(courseModal, "Course credits must be an integer between 1 and 6 inclusive.");
+            return;
+        }
+
+        // Retrieve selected student name for confirmation popup
+        const selectedStudentOption = courseStudentIdSelect.options[courseStudentIdSelect.selectedIndex];
+        const studentNameText = selectedStudentOption ? selectedStudentOption.textContent : "Student";
 
         try {
             await fetchAPI("/courses/", {
@@ -530,10 +619,14 @@ if (courseForm) {
             courseDropdownSelect.value = "";
             courseCreditsInput.value = "";
 
-            // Close map course modal
+            // Close map course modal on success
             closeModal(courseModal);
+
+            // Show confirmation OK popup
+            showConfirmation(`Course '${courseName}' mapped to ${studentNameText} successfully.`);
         } catch (e) {
-            console.error("Failed to map course to student:", e);
+            // Display error directly inside map course modal popup (e.g. duplicate course for same student)
+            showModalError(courseModal, e.message || "Failed to map course to student.");
         }
     });
 }
@@ -563,6 +656,14 @@ if (closeCourseModalBtn) {
     closeCourseModalBtn.addEventListener("click", () => closeModal(courseModal));
 }
 
+if (closeConfirmModalBtn) {
+    closeConfirmModalBtn.addEventListener("click", () => closeModal(confirmationModal));
+}
+
+if (confirmOkBtn) {
+    confirmOkBtn.addEventListener("click", () => closeModal(confirmationModal));
+}
+
 // Cancel Buttons inside Modals
 document.querySelectorAll(".cancel-modal-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
@@ -576,6 +677,7 @@ window.addEventListener("click", (event) => {
     if (event.target === studentModal) closeModal(studentModal);
     if (event.target === newCourseModal) closeModal(newCourseModal);
     if (event.target === courseModal) closeModal(courseModal);
+    if (event.target === confirmationModal) closeModal(confirmationModal);
 });
 
 // Close Modal on Escape key
@@ -584,6 +686,7 @@ window.addEventListener("keydown", (event) => {
         closeModal(studentModal);
         closeModal(newCourseModal);
         closeModal(courseModal);
+        closeModal(confirmationModal);
     }
 });
 

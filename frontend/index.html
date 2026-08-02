@@ -75,20 +75,21 @@
                 <h2 id="student-modal-title">Create New Student</h2>
                 <button type="button" id="close-student-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
             </div>
-            <form id="student-form" class="student-form" novalidate>
+            <div id="student-modal-error" class="modal-error-banner hidden" role="alert"></div>
+            <form id="student-form" class="student-form" autocomplete="off" novalidate>
                 <div class="form-group">
                     <label for="student-name">Full Name <span class="required">*</span></label>
-                    <input type="text" id="student-name" placeholder="e.g. Jane Doe" required>
+                    <input type="text" id="student-name" placeholder="e.g. Jane Doe" autocomplete="off" required>
                 </div>
 
                 <div class="form-group">
                     <label for="student-email">Email Address <span class="required">*</span></label>
-                    <input type="email" id="student-email" placeholder="e.g. jane@example.com" required>
+                    <input type="email" id="student-email" placeholder="e.g. jane@example.com" autocomplete="off" required>
                 </div>
 
                 <div class="form-group">
                     <label for="student-age">Age <span class="required">*</span></label>
-                    <input type="number" id="student-age" placeholder="e.g. 20" min="1" required>
+                    <input type="number" id="student-age" placeholder="e.g. 20" min="1" autocomplete="off" required>
                 </div>
 
                 <div class="modal-footer">
@@ -101,22 +102,18 @@
         </div>
     </div>
 
-    <!-- Modal 2: Create New Course Definition Overlay -->
+    <!-- Modal 2: Create New Course Definition Overlay (Only Course Title Input) -->
     <div id="new-course-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="new-course-modal-title" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="new-course-modal-title">Create New Course</h2>
                 <button type="button" id="close-new-course-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
             </div>
-            <form id="new-course-form" class="student-form" novalidate>
+            <div id="new-course-modal-error" class="modal-error-banner hidden" role="alert"></div>
+            <form id="new-course-form" class="student-form" autocomplete="off" novalidate>
                 <div class="form-group">
                     <label for="new-course-title">Course Title <span class="required">*</span></label>
-                    <input type="text" id="new-course-title" placeholder="e.g. Machine Learning" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="new-course-default-credits">Default Credits (1 to 6) <span class="required">*</span></label>
-                    <input type="number" id="new-course-default-credits" placeholder="e.g. 4" min="1" max="6" value="3" required>
+                    <input type="text" id="new-course-title" placeholder="e.g. Machine Learning" autocomplete="off" required>
                 </div>
 
                 <div class="modal-footer">
@@ -136,11 +133,12 @@
                 <h2 id="course-modal-title">Map Course to Student</h2>
                 <button type="button" id="close-course-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
             </div>
-            <form id="course-form" class="student-form" novalidate>
+            <div id="course-modal-error" class="modal-error-banner hidden" role="alert"></div>
+            <form id="course-form" class="student-form" autocomplete="off" novalidate>
                 <!-- 1. Student Selection Dropdown -->
                 <div class="form-group">
                     <label for="course-student-id">Select Student <span class="required">*</span></label>
-                    <select id="course-student-id" class="select-dropdown" required>
+                    <select id="course-student-id" class="select-dropdown" autocomplete="off" required>
                         <option value="">-- Select Student --</option>
                     </select>
                 </div>
@@ -148,7 +146,7 @@
                 <!-- 2. Course Selection Dropdown -->
                 <div class="form-group">
                     <label for="course-dropdown">Select Course <span class="required">*</span></label>
-                    <select id="course-dropdown" class="select-dropdown" required>
+                    <select id="course-dropdown" class="select-dropdown" autocomplete="off" required>
                         <option value="">-- Select Course --</option>
                     </select>
                 </div>
@@ -156,7 +154,7 @@
                 <!-- 3. Course Credits Input -->
                 <div class="form-group">
                     <label for="course-credits">Credits (1 to 6) <span class="required">*</span></label>
-                    <input type="number" id="course-credits" placeholder="e.g. 3" min="1" max="6" required>
+                    <input type="number" id="course-credits" placeholder="e.g. 3" min="1" max="6" autocomplete="off" required>
                 </div>
 
                 <div class="modal-footer">
@@ -169,9 +167,26 @@
         </div>
     </div>
 
+    <!-- Confirmation Success Modal Overlay -->
+    <div id="confirmation-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="confirm-modal-title" aria-modal="true">
+        <div class="modal-content confirmation-modal-content">
+            <div class="modal-header">
+                <h2 id="confirm-modal-title">Notification</h2>
+                <button type="button" id="close-confirm-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body confirmation-body">
+                <span class="confirm-icon">✅</span>
+                <p id="confirm-modal-message" class="confirm-message-text">Action completed successfully.</p>
+            </div>
+            <div class="modal-footer justify-center">
+                <button type="button" id="confirm-ok-btn" class="btn btn-primary btn-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
     <footer class="app-footer">
         <div class="footer-container">
-            <p>&copy; 2026 StudyTrack Service. Powered by FastAPI, SQLAlchemy &amp; Modern Vanilla Web API.</p>
+            <p>&copy; 2026 StudyTrack Service. Powered by FastAPI, SQLAlchemy &amp; Modern Web API.</p>
         </div>
     </footer>
 
