@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="StudyTrack - High Performance Full-Stack Student Roster & Course Enrollment Dashboard">
+    <title>StudyTrack Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand">
+                <span class="brand-icon">🎓</span>
+                <h1>StudyTrack Dashboard</h1>
+            </div>
+            <p class="tagline">Full-Stack Student Management & Course Roster Engine</p>
+        </div>
+    </header>
+
+    <nav class="app-nav">
+        <div class="nav-container">
+            <!-- Filter Group: Age & Reset -->
+            <div class="filter-group">
+                <label for="min-age-input">Filter by Min Age:</label>
+                <input type="number" id="min-age-input" placeholder="e.g. 20" min="1">
+                <button id="filter-btn" class="btn btn-secondary">Apply Filter</button>
+                <button id="clear-filter-btn" class="btn btn-ghost">Reset</button>
+            </div>
+
+            <!-- Action Buttons: New Student, New Course, Map Course to Student -->
+            <div class="actions-stats-group">
+                <button id="open-student-modal-btn" class="btn btn-primary">
+                    <span>➕ Create New Student</span>
+                </button>
+                <button id="open-new-course-modal-btn" class="btn btn-secondary">
+                    <span>📘 Create New Course</span>
+                </button>
+                <button id="open-course-modal-btn" class="btn btn-save">
+                    <span>🔗 Map Course to Student</span>
+                </button>
+                <span id="total-students-badge" class="badge">Total Students: 0</span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Error Banner Container -->
+        <div id="error-banner" class="error-banner hidden" role="alert">
+            <span class="error-icon">⚠️</span>
+            <span id="error-message" class="error-text">An unexpected error occurred.</span>
+            <button id="close-error-btn" class="close-error-btn" aria-label="Close error message">&times;</button>
+        </div>
+
+        <!-- Roster Section -->
+        <section class="roster-section">
+            <div class="section-header">
+                <h2>Student Roster</h2>
+                <span class="live-indicator"><span class="dot"></span> Live DB Sync</span>
+            </div>
+            
+            <div id="roster-list" class="roster-container">
+                <!-- Student cards dynamically created via JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal 1: Create New Student Overlay -->
+    <div id="student-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="student-modal-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="student-modal-title">Create New Student</h2>
+                <button type="button" id="close-student-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            <form id="student-form" class="student-form" novalidate>
+                <div class="form-group">
+                    <label for="student-name">Full Name <span class="required">*</span></label>
+                    <input type="text" id="student-name" placeholder="e.g. Jane Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="student-email">Email Address <span class="required">*</span></label>
+                    <input type="email" id="student-email" placeholder="e.g. jane@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="student-age">Age <span class="required">*</span></label>
+                    <input type="number" id="student-age" placeholder="e.g. 20" min="1" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span>➕ Save Student</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Create New Course Definition Overlay -->
+    <div id="new-course-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="new-course-modal-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="new-course-modal-title">Create New Course</h2>
+                <button type="button" id="close-new-course-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            <form id="new-course-form" class="student-form" novalidate>
+                <div class="form-group">
+                    <label for="new-course-title">Course Title <span class="required">*</span></label>
+                    <input type="text" id="new-course-title" placeholder="e.g. Machine Learning" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="new-course-default-credits">Default Credits (1 to 6) <span class="required">*</span></label>
+                    <input type="number" id="new-course-default-credits" placeholder="e.g. 4" min="1" max="6" value="3" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
+                    <button type="submit" class="btn btn-secondary">
+                        <span>📘 Add Course to System</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Map Course to Student Overlay (with Student & Course Dropdowns) -->
+    <div id="course-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="course-modal-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="course-modal-title">Map Course to Student</h2>
+                <button type="button" id="close-course-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            <form id="course-form" class="student-form" novalidate>
+                <!-- 1. Student Selection Dropdown -->
+                <div class="form-group">
+                    <label for="course-student-id">Select Student <span class="required">*</span></label>
+                    <select id="course-student-id" class="select-dropdown" required>
+                        <option value="">-- Select Student --</option>
+                    </select>
+                </div>
+
+                <!-- 2. Course Selection Dropdown -->
+                <div class="form-group">
+                    <label for="course-dropdown">Select Course <span class="required">*</span></label>
+                    <select id="course-dropdown" class="select-dropdown" required>
+                        <option value="">-- Select Course --</option>
+                    </select>
+                </div>
+
+                <!-- 3. Course Credits Input -->
+                <div class="form-group">
+                    <label for="course-credits">Credits (1 to 6) <span class="required">*</span></label>
+                    <input type="number" id="course-credits" placeholder="e.g. 3" min="1" max="6" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
+                    <button type="submit" class="btn btn-save">
+                        <span>🔗 Map Course to Student</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        <div class="footer-container">
+            <p>&copy; 2026 StudyTrack Service. Powered by FastAPI, SQLAlchemy &amp; Modern Vanilla Web API.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
