@@ -66,6 +66,13 @@ def get_courses(db: Session) -> List[Course]:
     """Retrieve all course records."""
     return db.query(Course).all()
 
+def get_student_course_by_name(db: Session, student_id: int, course_name: str) -> Optional[Course]:
+    """Check if a student is already enrolled in a course with the given course name (case-insensitive)."""
+    return db.query(Course).filter(
+        Course.student_id == student_id,
+        func.lower(Course.course_name) == func.lower(course_name)
+    ).first()
+
 def create_course(db: Session, course: CourseCreate) -> Course:
     """Create a new course enrollment for a student."""
     db_course = Course(
