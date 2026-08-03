@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="StudyTrack - High Performance Full-Stack Student Roster & Course Enrollment Dashboard">
+    <meta name="description" content="StudyTrack - High Performance Full-Stack Student Roster, Algorithms Engine & AI Assistant Dashboard">
     <title>StudyTrack Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,58 +17,153 @@
                 <span class="brand-icon">🎓</span>
                 <h1>StudyTrack Dashboard</h1>
             </div>
-            <p class="tagline">Full-Stack Student Management & Course Roster Engine</p>
+            <p class="tagline">Full-Stack Student Roster, Algorithms Engine &amp; AI Assistant</p>
         </div>
     </header>
 
-    <nav class="app-nav">
-        <div class="nav-container">
-            <!-- Filter Group: Age & Reset -->
-            <div class="filter-group">
-                <label for="min-age-input">Filter by Min Age:</label>
-                <input type="number" id="min-age-input" placeholder="e.g. 20" min="1">
-                <button id="filter-btn" class="btn btn-secondary">Apply Filter</button>
-                <button id="clear-filter-btn" class="btn btn-ghost">Reset</button>
-            </div>
-
-            <!-- Action Buttons: New Student, New Course, Map Course to Student -->
-            <div class="actions-stats-group">
-                <button id="open-student-modal-btn" class="btn btn-primary">
-                    <span>➕ Create New Student</span>
-                </button>
-                <button id="open-new-course-modal-btn" class="btn btn-secondary">
-                    <span>📘 Create New Course</span>
-                </button>
-                <button id="open-course-modal-btn" class="btn btn-save">
-                    <span>🔗 Map Course to Student</span>
-                </button>
-                <span id="total-students-badge" class="badge">Total Students: 0</span>
-            </div>
+    
+    <nav class="tab-nav">
+        <div class="tab-container">
+            <button class="tab-btn active" data-tab="tab-part1">
+                <span>Student Roster</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-part2">
+                <span>Algorithms Engine</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-part3">
+                <span>AI Assistant</span>
+            </button>
         </div>
     </nav>
 
     <main class="main-content">
-        <!-- Error Banner Container -->
+        
         <div id="error-banner" class="error-banner hidden" role="alert">
             <span class="error-icon">⚠️</span>
             <span id="error-message" class="error-text">An unexpected error occurred.</span>
             <button id="close-error-btn" class="close-error-btn" aria-label="Close error message">&times;</button>
         </div>
 
-        <!-- Roster Section -->
-        <section class="roster-section">
-            <div class="section-header">
-                <h2>Student Roster</h2>
-                <span class="live-indicator"><span class="dot"></span> Live DB Sync</span>
+       
+        <div id="tab-part1" class="tab-content active">
+            <div class="algo-dashboard-header">
+                <div class="section-header">
+                    <h2>Student Roster Management</h2>
+                    <span class="live-indicator"><span class="dot"></span> Live DB Sync</span>
+                </div>
+            </div>
+            <div class="app-nav">
+                <div class="nav-container">
+                    <div class="filter-group">
+                        <label for="min-age-input">Filter by Min Age:</label>
+                        <input type="number" id="min-age-input" placeholder="e.g. 20" min="1">
+                        <button id="filter-btn" class="btn btn-secondary">Apply Filter</button>
+                        <button id="clear-filter-btn" class="btn btn-ghost">Reset</button>
+                    </div>
+
+            
+                    <div class="actions-stats-group">
+                        <button id="open-student-modal-btn" class="btn btn-primary">
+                            <span>➕New Student</span>
+                        </button>
+                        <button id="open-new-course-modal-btn" class="btn btn-secondary">
+                            <span>📘New Course</span>
+                        </button>
+                        <button id="open-course-modal-btn" class="btn btn-save">
+                            <span>🔗 Map Course to Student</span>
+                        </button>
+                        <span id="total-students-badge" class="badge">Total Students: 0</span>
+                    </div>
+                </div>
+            </div>
+
+            
+            <section class="roster-section">
+                <div id="roster-list" class="roster-container">
+            
+                </div>
+            </section>
+        </div>
+
+        
+        <div id="tab-part2" class="tab-content hidden">
+            <div class="algo-dashboard-header">
+                <h2>Integrated Algorithms Engine</h2>
+            </div>
+
+            <div class="algo-grid">
+                
+                <div class="algo-card">
+                    <div class="algo-card-header">
+                        <h3>1. Hand-Written Insertion Sort</h3>
+                        <span class="badge badge-purple">In-Place O(n²)</span>
+                    </div>
+                    <p class="algo-desc">Sorts live student records in place ascending by <strong>Age</strong> or <strong>Name</strong> without calling built-in <code>sort()</code> or <code>sorted()</code> utilities.</p>
+                    <div class="algo-controls-row">
+                        <label for="sort-by-select">Sort Field:</label>
+                        <select id="sort-by-select" class="select-dropdown" autocomplete="off">
+                            <option value="age">Age (Ascending)</option>
+                            <option value="name">Name (Alphabetical)</option>
+                        </select>
+                        <button id="run-sort-btn" class="btn btn-secondary btn-block-sm">⚡ Insertion Sort</button>
+                    </div>
+                    <div id="sort-results-container" class="algo-results-box">
+                        <p class="text-muted">Click 'Insertion Sort' to execute the algorithm.</p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Hand-Written Binary Search Engine -->
+                <div class="algo-card">
+                    <div class="algo-card-header">
+                        <h3>2. Hand-Written Binary Search</h3>
+                        <span class="badge badge-green">Iterative O(log n)</span>
+                    </div>
+                    <p class="algo-desc">Pre-sorts records alphabetically by name and performs a binary search using overflow-safe midpoint <code>mid = low + (high - low) // 2</code>.</p>
+                    <div class="algo-controls-row">
+                        <input type="text" id="search-name-input" placeholder="Exact Name (e.g. Priya Iyer)" autocomplete="off">
+                        <button id="run-search-btn" class="btn btn-primary btn-block-sm">🔍 Binary Search</button>
+                    </div>
+                    <div id="search-results-container" class="algo-results-box">
+                        <p class="text-muted">Enter a student's exact name above to search.</p>
+                    </div>
+                </div>
+
+                
+                <div class="algo-card full-width">
+                    <div class="algo-card-header">
+                        <h3>3. Roster Report Generator &amp; Min Age Counter</h3>
+                        <span class="badge badge-blue">Report Engine</span>
+                    </div>
+                    <p class="algo-desc">Displays student records and counts students matching the selected minimum age.</p>
+                    <div class="algo-controls-row">
+                        <label for="report-min-age-input">Min age:</label>
+                        <input type="number" id="report-min-age-input" placeholder="21" value="21" min="1" autocomplete="off">
+                        <button id="run-report-btn" class="btn btn-save">📋 Roster Report</button>
+                        <span id="report-count-badge" class="badge badge-blue hidden">Students Aged &ge; 21: 0</span>
+                    </div>
+                    <div id="report-results-container" class="algo-results-box">
+                        <p class="text-muted">Click 'Roster Report' to display student records and counts.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div id="tab-part3" class="tab-content hidden">
+            <div class="algo-dashboard-header">
+                <h2>Integrated AI Assistant</h2>
+                <p class="algo-subtitle">Smart AI natural language queries</p>
             </div>
             
-            <div id="roster-list" class="roster-container">
-                <!-- Student cards dynamically created via JavaScript -->
+            <div class="placeholder-card">
+                <span class="placeholder-icon"></span>
+                <h3>AI Assistant Module</h3>
+                <p>AI Assistant features </p>
             </div>
-        </section>
+        </div>
     </main>
 
-    <!-- Modal 1: Create New Student Overlay -->
+    
     <div id="student-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="student-modal-title" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
@@ -102,7 +197,6 @@
         </div>
     </div>
 
-    <!-- Modal 2: Create New Course Definition Overlay (Only Course Title Input) -->
     <div id="new-course-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="new-course-modal-title" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
@@ -119,14 +213,13 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
                     <button type="submit" class="btn btn-secondary">
-                        <span>📘 Add Course to System</span>
+                        <span>📘Add Course</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal 3: Map Course to Student Overlay (with Student & Course Dropdowns) -->
     <div id="course-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="course-modal-title" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
@@ -135,7 +228,7 @@
             </div>
             <div id="course-modal-error" class="modal-error-banner hidden" role="alert"></div>
             <form id="course-form" class="student-form" autocomplete="off" novalidate>
-                <!-- 1. Student Selection Dropdown -->
+                
                 <div class="form-group">
                     <label for="course-student-id">Select Student <span class="required">*</span></label>
                     <select id="course-student-id" class="select-dropdown" autocomplete="off" required>
@@ -143,7 +236,6 @@
                     </select>
                 </div>
 
-                <!-- 2. Course Selection Dropdown -->
                 <div class="form-group">
                     <label for="course-dropdown">Select Course <span class="required">*</span></label>
                     <select id="course-dropdown" class="select-dropdown" autocomplete="off" required>
@@ -151,7 +243,7 @@
                     </select>
                 </div>
 
-                <!-- 3. Course Credits Input -->
+                
                 <div class="form-group">
                     <label for="course-credits">Credits (1 to 6) <span class="required">*</span></label>
                     <input type="number" id="course-credits" placeholder="e.g. 3" min="1" max="6" autocomplete="off" required>
@@ -160,14 +252,13 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
                     <button type="submit" class="btn btn-save">
-                        <span>🔗 Map Course to Student</span>
+                        <span>🔗Map Course to Student</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Confirmation Success Modal Overlay -->
     <div id="confirmation-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="confirm-modal-title" aria-modal="true">
         <div class="modal-content confirmation-modal-content">
             <div class="modal-header">

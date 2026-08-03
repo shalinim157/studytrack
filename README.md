@@ -210,3 +210,60 @@ Step 6: Error Handling Verification
 4. Backend Server Offline:
    - Stopping Uvicorn triggers on-page error banner `<div id="error-banner">`: `"Could not reach the StudyTrack backend. Please ensure the backend server is running."`
 
+Part 2: Integrated Algorithms Engine & Roster Reports
+
+The Part 2 algorithms engine is operates directly on the live SQLite database populated with the official 8-student seed dataset (`backend/seed_data.py`).
+
+Algorithmic Complexity & Precondition Explanation
+
+1. Insertion Sort Complexity Analysis:
+   Insertion Sort builds a sorted array one element at a time by picking each key and inserting it into its correct position among previously sorted elements.
+   - Worst-Case Time Complexity O(n^2): Occurs when the input list is sorted in exact reverse order. For every element at index i, the inner "while loop" must compare and shift all i preceding elements to the right. This requires \sum_{i=1}^{n-1} i = \frac{n(n-1)}{2} operations, resulting in quadratic time complexity O(n^2).
+   -Best-Case Time Complexity O(n): Occurs when the input list is already sorted in ascending order. For each key, the inner `while` loop condition (`students[j][field] > key_value`) fails on the very first comparison without shifting any elements. Consequently, the algorithm executes exactly n-1 total comparisons, achieving linear time complexity O(n).
+
+2. Binary Search Sorted Precondition:
+   Binary Search operates on the divide-and-conquer principle by evaluating the middle element (`mid = low + (high - low) // 2`) and eliminating half of the search space at each iteration. This halving logic relies strictly on the total ordering property: if the target is greater than the middle element, all elements to the left of `mid` are guaranteed to be smaller and can be safely discarded. If the input list is unsorted, discarding half of the array risks eliminating the target element, causing false negatives. Therefore, the dataset must be pre-sorted by the search attribute before executing Binary Search.
+
+
+Part 2 API Endpoint Reference & Verification
+
+ Endpoint - `GET /students/sorted?by=age`
+-Description: Fetches all students and sorts them in place using hand-written Insertion Sort(`insertion_sort_by_field`).
+-Sample Request: `GET http://localhost:8000/students/sorted?by=age`
+
+  [
+    { "id": 4, "name": "Farhan Sheikh", "email": "farhan.sheikh@example.com", "age": 18 },
+    { "id": 2, "name": "Rohan Mehta", "email": "rohan.mehta@example.com", "age": 19 },
+    { "id": 7, "name": "Meera Joshi", "email": "meera.joshi@example.com", "age": 20 },
+    { "id": 5, "name": "Priya Iyer", "email": "priya.iyer@example.com", "age": 21 },
+    { "id": 1, "name": "Aditi Rao", "email": "aditi.rao@example.com", "age": 22 },
+    { "id": 6, "name": "Devansh Gupta", "email": "devansh.gupta@example.com", "age": 23 },
+    { "id": 8, "name": "Sameer Khan", "email": "sameer.khan@example.com", "age": 24 },
+    { "id": 3, "name": "Kavya Nair", "email": "kavya.nair@example.com", "age": 25 }
+  ]
+
+2. `GET /students/search?name=Priya Iyer`
+- Description: Sorts students alphabetically by name using Python's `sorted()`, then performs an iterative hand-written Binary Search (`binary_search_by_name`).
+- Sample Request: `GET http://localhost:8000/students/search?name=Priya%20Iyer`
+- Backend Console Log: `INFO: 127.0.0.1:5500 - "GET /students/search?name=Priya%20Iyer HTTP/1.1" 200 OK`
+- Verified Response :
+  {
+    "id": 5,
+    "name": "Priya Iyer",
+    "email": "priya.iyer@example.com",
+    "age": 21,
+    "courses": [ ... ]
+  }
+  
+- Nonexistent Search Request: `GET /students/search?name=Nonexistent` -> Returns `404 Not Found` (`{ "detail": "Student with name 'Nonexistent' not found." }`).
+
+3. `GET /students/report?min_age=21`
+- Description: Generates a formatted multi-line roster report (`format_roster_report`) and counts students meeting the minimum age threshold (`count_students_meeting_min_age`) using an explicit accumulator variable.
+- *Sample Request: `GET http://localhost:8000/students/report?min_age=21`
+- Backend Console Log: `INFO: 127.0.0.1:5500 - "GET /students/report?min_age=21 HTTP/1.1" 200 OK`
+- Verified Response (count_meeting_min_age = 5):
+  Output
+  {
+    "report": "[Age 22] Aditi Rao <aditi.rao@example.com>\n[Age 19] Rohan Mehta <rohan.mehta@example.com>\n[Age 25] Kavya Nair <kavya.nair@example.com>\n[Age 18] Farhan Sheikh <farhan.sheikh@example.com>\n[Age 21] Priya Iyer <priya.iyer@example.com>\n[Age 23] Devansh Gupta <devansh.gupta@example.com>\n[Age 20] Meera Joshi <meera.joshi@example.com>\n[Age 24] Sameer Khan <sameer.khan@example.com>",
+    "count_meeting_min_age": 5
+  }
