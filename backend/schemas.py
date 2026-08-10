@@ -3,27 +3,38 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 # --- Course Schemas ---
 
-class CourseBase(BaseModel):
-    course_name: str
-    credits: int = Field(..., ge=1, le=6, description="Course credits must be between 1 and 6 inclusive")
-
-class CourseCreate(CourseBase):
+class CourseCreate(BaseModel):
     student_id: int
+    course_name: str
+    credits: int
+
+    @field_validator("credits")
+    @classmethod
+    def validate_course_credits(cls, value: int) -> int:
+        if value < 1 or value > 6:
+            raise ValueError("Course credits must be between 1 and 6 inclusive")
+        return value
 
 class CourseUpdate(BaseModel):
     course_name: Optional[str] = None
-    credits: Optional[int] = Field(None, ge=1, le=6, description="Course credits must be between 1 and 6 inclusive")
+    credits: Optional[int] = None
 
-class CourseResponse(CourseBase):
+    @field_validator("credits")
+    @classmethod
+    def validate_course_credits(cls, value: Optional[int]) -> Optional[int]:
+        if value is not None and (value < 1 or value > 6):
+            raise ValueError("Course credits must be between 1 and 6 inclusive")
+        return value
+
+class CourseResponse(CourseCreate):
     id: int
-    student_id: int
 
     model_config = ConfigDict(from_attributes=True)
 
 
 # --- Student Schemas ---
 
-class StudentBase(BaseModel):
+class StudentCreate(BaseModel):
     name: str
     email: str
     age: int = Field(..., gt=0, description="Age must be a positive integer greater than 0")
@@ -34,9 +45,6 @@ class StudentBase(BaseModel):
         if "@" not in value:
             raise ValueError("Invalid email format: Must contain an '@' character")
         return value
-
-class StudentCreate(StudentBase):
-    pass
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
@@ -50,7 +58,7 @@ class StudentUpdate(BaseModel):
             raise ValueError("Invalid email format: Must contain an '@' character")
         return value
 
-class StudentResponse(StudentBase):
+class StudentResponse(StudentCreate):
     id: int
     courses: List[CourseResponse] = []
 
@@ -59,3 +67,14 @@ class StudentResponse(StudentBase):
 class StudentCourseCountResponse(BaseModel):
     student_id: int
     course_count: int
+
+
+# --- AI Assistant Schemas ---
+
+class SummarizeRequest(BaseModel):
+    text: str = Field(..., description="Raw study notes to summarize")
+
+class SummarizeResponse(BaseModel):
+    topic: str
+    key_points: List[str]
+    difficulty: str

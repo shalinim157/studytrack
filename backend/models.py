@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -10,7 +10,6 @@ class Student(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     age = Column(Integer, nullable=False)
 
-    # Bi-directional relationship to Course
     courses = relationship("Course", back_populates="student", cascade="all, delete-orphan")
 
 class Course(Base):
@@ -21,10 +20,4 @@ class Course(Base):
     credits = Column(Integer, nullable=False)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
 
-    __table_args__ = (
-        CheckConstraint("credits >= 1 AND credits <= 6", name="check_course_credits"),
-        UniqueConstraint("student_id", "course_name", name="uix_student_course_enrollment"),
-    )
-
-    # Bi-directional relationship to Student
     student = relationship("Student", back_populates="courses")

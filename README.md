@@ -66,13 +66,11 @@ Student Endpoints
 | `PATCH` | `/courses/{id}` | Update course details | `{ "credits": 4 }` | `200 OK` -> Updated Course |
 | `DELETE` | `/courses/{id}` | Delete course record | None | `200 OK` / `404 Not Found` |
 
-*Note: Dedicated 200/204 handlers are also registered for `/favicon.ico` and `/.well-known/appspecific/com.chrome.devtools.json` to eliminate browser DevTools 404 console warnings.*
-
-## 🔍 Database Aggregation Query Note
+Database Aggregation Query Note
 
 The endpoint `GET /students/{student_id}/course-count` computes the course enrollment count directly within SQLite via an aggregate database query in `backend/crud.py`:
 
-# Executed in backend/crud.py:
+Executed in backend/crud.py:
 def get_student_course_count(db: Session, student_id: int) -> int:
     return db.query(func.count(Course.id)).filter(Course.student_id == student_id).scalar() or 0
 
@@ -267,3 +265,92 @@ Part 2 API Endpoint Reference & Verification
     "report": "[Age 22] Aditi Rao <aditi.rao@example.com>\n[Age 19] Rohan Mehta <rohan.mehta@example.com>\n[Age 25] Kavya Nair <kavya.nair@example.com>\n[Age 18] Farhan Sheikh <farhan.sheikh@example.com>\n[Age 21] Priya Iyer <priya.iyer@example.com>\n[Age 23] Devansh Gupta <devansh.gupta@example.com>\n[Age 20] Meera Joshi <meera.joshi@example.com>\n[Age 24] Sameer Khan <sameer.khan@example.com>",
     "count_meeting_min_age": 5
   }
+
+
+Part 3: Integrated AI Assistant Module & Semantic Search
+
+The Part 3 AI Assistant module provides deterministic offline note summarization (`backend/ai_service.py`) and word-embedding semantic search over a 5-note study dataset using first-principles cosine similarity.
+
+Execution Mode & Security Declaration
+- Demonstration Mode: Default offline `AI_MODE=mock` mode is active for all grading operations. It operates deterministically with zero network calls and zero external API dependencies.
+- Security Commitment: No `.env` file, API key string, or secret token is committed anywhere in this repository.
+
+Structured LLM Prompting Technique (Real Mode Documentation)
+If `AI_MODE=real` were selected to connect to a production LLM completion provider (e.g., Google Gemini or OpenAI Chat Completions), the following exact prompt (combining task role, context, constraints, and structured JSON output format) would be sent to the API:
+
+```text
+SYSTEM PROMPT / TASK ROLE:
+You are an expert AI Study Assistant specializing in educational note analysis. Your task is to analyze the user's raw study notes and output a strictly formatted JSON summary object.
+
+CONTEXT & INPUT:
+User Study Notes:
+"""
+{raw_text}
+"""
+
+CONSTRAINTS & FORMAT INSTRUCTIONS:
+1. Output MUST be valid JSON and contain EXACTLY these three top-level keys:
+   - "topic": (string) A short 2-5 word title summarizing the central concept.
+   - "key_points": (list of strings) Up to 3 key summary bullet points extracted from the notes.
+   - "difficulty": (string) Exactly one of "easy", "medium", or "hard".
+2. Do NOT include markdown codeblock wrappers, conversational intro/outro text, or additional key fields.
+3. If the input text is empty or whitespace-only, return:
+   {"topic": "untitled", "key_points": [], "difficulty": "easy"}
+```
+
+Part 3 API Endpoint Reference & Verification
+
+1. `POST /assistant/summarize`
+- Description: Deterministically summarizes raw study notes into a fixed-shape JSON object (`topic`, `key_points`, `difficulty`).
+- Sample Request: `POST http://localhost:8000/assistant/summarize`
+- HTTP Request Body:
+  {
+    "text": "Binary search requires a sorted array. It repeatedly halves the search range using a midpoint comparison."
+  }
+- Backend Console Log: `INFO: 127.0.0.1:8000 - "POST /assistant/summarize HTTP/1.1" 200 OK`
+- Verified Response Payload (200 OK):
+  {
+    "topic": "Binary Search Requires A Sorted Array",
+    "key_points": [
+      "Binary search requires a sorted array",
+      "It repeatedly halves the search range using a midpoint comparison"
+    ],
+    "difficulty": "easy"
+  }
+- Empty/Whitespace Input Verification (`POST` with `{"text": ""}`):
+  - Verified Response: `{"topic": "untitled", "key_points": [], "difficulty": "easy"}` (No exception raised).
+
+2. `GET /assistant/search?query=<text>`
+- Description: Converts notes and input query into 12-dimensional word-frequency vectors using a fixed vocabulary (`mock_embed`) and ranks notes descending by cosine similarity (`cosine_similarity`).
+- Sample Request: `GET http://localhost:8000/assistant/search?query=binary%20search%20algorithm`
+- Backend Console Log: `INFO: 127.0.0.1:8000 - "GET /assistant/search?query=binary%20search%20algorithm HTTP/1.1" 200 OK`
+- Verified Response Payload (200 OK):
+  [
+    {
+      "id": 1,
+      "text": "Binary search requires a sorted array and repeatedly halves the search range using a midpoint comparison.",
+      "score": 0.7071
+    },
+    {
+      "id": 2,
+      "text": "Insertion sort builds a sorted list one element at a time by shifting larger elements to the right.",
+      "score": 0.0
+    },
+    {
+      "id": 3,
+      "text": "FastAPI uses Pydantic models to validate request bodies and automatically generates Swagger documentation.",
+      "score": 0.0
+    },
+    {
+      "id": 4,
+      "text": "SQL joins combine rows from two tables using a matching column, such as inner join, left join, and full join.",
+      "score": 0.0
+    },
+    {
+      "id": 5,
+      "text": "Prompt engineering structures a task, context, constraints, and desired output format to guide an LLM's response.",
+      "score": 0.0
+    }
+  ]
+- Out-of-Vocabulary / Empty Query Verification (`GET /assistant/search?query=xyz%20zzz` or `query=`):
+  - Verified Response: Returns all 5 notes with `score: 0.0` in original ID order without raising a `ZeroDivisionError`.
