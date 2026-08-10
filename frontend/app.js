@@ -1,5 +1,7 @@
-// Single-process run mode relative API endpoint base
-const API_BASE_URL = "";
+// Universal API Base URL: Uses relative URL if served from port 8000, otherwise falls back to http://127.0.0.1:8000
+const API_BASE_URL = (window.location.origin && window.location.origin.includes(":8000"))
+    ? ""
+    : "http://127.0.0.1:8000";
 
 // DOM Elements
 const rosterList = document.getElementById("roster-list");
@@ -18,6 +20,8 @@ const minAgeInput = document.getElementById("min-age-input");
 const courseStudentIdSelect = document.getElementById("course-student-id");
 const courseDropdownSelect = document.getElementById("course-dropdown");
 const courseCreditsInput = document.getElementById("course-credits");
+const newCourseStudentIdSelect = document.getElementById("new-course-student-id");
+const newCourseCreditsInput = document.getElementById("new-course-credits");
 
 // Modal Elements
 const openStudentModalBtn = document.getElementById("open-student-modal-btn");
@@ -27,45 +31,26 @@ const openCourseModalBtn = document.getElementById("open-course-modal-btn");
 const studentModal = document.getElementById("student-modal");
 const newCourseModal = document.getElementById("new-course-modal");
 const courseModal = document.getElementById("course-modal");
+const editStudentModal = document.getElementById("edit-student-modal");
+const updateCourseModal = document.getElementById("update-course-modal");
 const confirmationModal = document.getElementById("confirmation-modal");
 
 const closeStudentModalBtn = document.getElementById("close-student-modal");
 const closeNewCourseModalBtn = document.getElementById("close-new-course-modal");
 const closeCourseModalBtn = document.getElementById("close-course-modal");
+const closeEditStudentModalBtn = document.getElementById("close-edit-student-modal");
+const closeUpdateCourseModalBtn = document.getElementById("close-update-course-modal");
 const closeConfirmModalBtn = document.getElementById("close-confirm-modal");
 const confirmOkBtn = document.getElementById("confirm-ok-btn");
 const confirmModalMessage = document.getElementById("confirm-modal-message");
+const editStudentForm = document.getElementById("edit-student-form");
+const updateCourseForm = document.getElementById("update-course-form");
+const newCourseModalListContainer = document.getElementById("new-course-modal-list-container");
 
 // State
 let allStudents = [];
-let availableCoursesSet = new Set([
-    "Computer Science 101",
-    "Data Structures",
-    "Algorithms",
-    "Calculus I",
-    "Linear Algebra",
-    "Web Development",
-    "Database Systems",
-    "Operating Systems",
-    "Physics I",
-    "Artificial Intelligence",
-    "Machine Learning"
-]);
-
-// Course default credits map
-const courseCreditsMap = {
-    "Computer Science 101": 3,
-    "Data Structures": 4,
-    "Algorithms": 4,
-    "Calculus I": 4,
-    "Linear Algebra": 3,
-    "Web Development": 3,
-    "Database Systems": 3,
-    "Operating Systems": 4,
-    "Physics I": 4,
-    "Artificial Intelligence": 4,
-    "Machine Learning": 4
-};
+let availableCoursesSet = new Set();
+const courseCreditsMap = {};
 
 /**
  * Display main on-page error banner.
@@ -187,7 +172,7 @@ async function fetchAPI(url, options = {}) {
  * Populate Student and Course dropdown options in the Map Course to Student Modal.
  */
 function updateMapModalDropdowns(students) {
-    // 1. Populate Student Dropdown
+    // 1. Populate Student Dropdown in Map Course modal
     if (courseStudentIdSelect) {
         const currentSelected = courseStudentIdSelect.value;
         courseStudentIdSelect.innerHTML = '<option value="">-- Select Student --</option>';
@@ -198,6 +183,19 @@ function updateMapModalDropdowns(students) {
             courseStudentIdSelect.appendChild(option);
         });
         if (currentSelected) courseStudentIdSelect.value = currentSelected;
+    }
+
+    // 1b. Populate Student Dropdown in New Course modal
+    if (newCourseStudentIdSelect) {
+        const currentSelected = newCourseStudentIdSelect.value;
+        newCourseStudentIdSelect.innerHTML = '<option value="">-- Select Student --</option>';
+        students.forEach(s => {
+            const option = document.createElement("option");
+            option.value = s.id;
+            option.textContent = s.name;
+            newCourseStudentIdSelect.appendChild(option);
+        });
+        if (currentSelected) newCourseStudentIdSelect.value = currentSelected;
     }
 
     // 2. Also collect any existing courses from student records into availableCoursesSet
@@ -334,13 +332,26 @@ function createStudentCardElement(student) {
     // Card Actions
     const cardActions = document.createElement("div");
     cardActions.className = "card-actions";
+    cardActions.style.display = "flex";
+    cardActions.style.gap = "0.5rem";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn btn-secondary btn-sm edit-student-btn";
+    editBtn.style.flex = "1";
+    editBtn.setAttribute("data-id", student.id);
+    editBtn.setAttribute("data-name", student.name);
+    editBtn.setAttribute("data-email", student.email);
+    editBtn.setAttribute("data-age", student.age);
+    editBtn.textContent = "✏️ Edit";
 
     const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn btn-danger btn-sm delete-btn btn-block";
+    deleteBtn.className = "btn btn-danger btn-sm delete-btn";
+    deleteBtn.style.flex = "1";
     deleteBtn.setAttribute("data-id", student.id);
     deleteBtn.setAttribute("data-name", student.name);
-    deleteBtn.textContent = "🗑️ Delete Student";
+    deleteBtn.textContent = "🗑️ Delete";
 
+    cardActions.appendChild(editBtn);
     cardActions.appendChild(deleteBtn);
 
     // Assemble Card
@@ -356,24 +367,28 @@ function createStudentCardElement(student) {
  * Renders the roster list by appending dynamically created DOM elements.
  */
 function renderRoster(students) {
-    rosterList.innerHTML = ""; // Clear container
+    const container = document.getElementById("roster-list") || rosterList;
+    if (!container) return;
+    container.innerHTML = ""; // Clear container
+
+    const badge = document.getElementById("total-students-badge") || totalStudentsBadge;
 
     if (!students || students.length === 0) {
         const emptyState = document.createElement("div");
         emptyState.className = "empty-state";
         emptyState.innerHTML = "<p>No students found matching current criteria.</p>";
-        rosterList.appendChild(emptyState);
-        if (totalStudentsBadge) totalStudentsBadge.textContent = "Total Students: 0";
+        container.appendChild(emptyState);
+        if (badge) badge.textContent = "Total Students: 0";
         return;
     }
 
     students.forEach(student => {
         const cardEl = createStudentCardElement(student);
-        rosterList.appendChild(cardEl);
+        container.appendChild(cardEl);
     });
 
-    if (totalStudentsBadge) {
-        totalStudentsBadge.textContent = `Total Students: ${students.length}`;
+    if (badge) {
+        badge.textContent = `Total Students: ${students.length}`;
     }
 }
 
@@ -401,11 +416,24 @@ async function loadRoster(minAge = null) {
  * Event Delegation on #roster-list container.
  */
 rosterList.addEventListener("click", async (event) => {
+    const editBtn = event.target.closest(".edit-student-btn");
     const saveBtn = event.target.closest(".save-age-btn");
     const deleteBtn = event.target.closest(".delete-btn");
     const removeCourseBtn = event.target.closest(".remove-course-btn");
 
-    if (saveBtn) {
+    if (editBtn) {
+        const studentId = editBtn.getAttribute("data-id");
+        const name = editBtn.getAttribute("data-name");
+        const email = editBtn.getAttribute("data-email");
+        const age = editBtn.getAttribute("data-age");
+
+        document.getElementById("edit-student-id").value = studentId;
+        document.getElementById("edit-student-name").value = name;
+        document.getElementById("edit-student-email").value = email;
+        document.getElementById("edit-student-age").value = age;
+
+        openModal(editStudentModal);
+    } else if (saveBtn) {
         const studentId = saveBtn.getAttribute("data-id");
         const card = saveBtn.closest(".student-card");
         const ageInput = card.querySelector(".inline-age-input");
@@ -464,6 +492,40 @@ rosterList.addEventListener("click", async (event) => {
         }
     }
 });
+
+/**
+ * Form: #edit-student-form Submit Handler (PATCH /students/{student_id}).
+ */
+if (editStudentForm) {
+    editStudentForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        hideModalErrors();
+
+        const studentId = document.getElementById("edit-student-id").value;
+        const name = document.getElementById("edit-student-name").value.trim();
+        const email = document.getElementById("edit-student-email").value.trim();
+        const ageVal = document.getElementById("edit-student-age").value;
+        const age = parseInt(ageVal, 10);
+
+        if (!name || !email || isNaN(age) || age <= 0) {
+            showModalError(editStudentModal, "Please provide valid student details.");
+            return;
+        }
+
+        try {
+            const updated = await fetchAPI(`/students/${studentId}`, {
+                method: "PATCH",
+                body: JSON.stringify({ name, email, age }),
+            });
+
+            closeModal(editStudentModal);
+            await loadRoster(minAgeInput ? minAgeInput.value : null);
+            showConfirmation(`Student '${updated.name}' updated successfully.`);
+        } catch (e) {
+            showModalError(editStudentModal, e.message || "Failed to update student.");
+        }
+    });
+}
 
 /**
  * Form 1: #student-form Submit Handler (Create New Student).
@@ -535,7 +597,7 @@ studentForm.addEventListener("submit", async (event) => {
 });
 
 /**
- * Form 2: #new-course-form Submit Handler (Create New Course Title - Only Title Input).
+ * Form 2: #new-course-form Submit Handler (Add Course Name).
  */
 if (newCourseForm) {
     newCourseForm.addEventListener("submit", (event) => {
@@ -543,26 +605,38 @@ if (newCourseForm) {
         hideModalErrors();
 
         const titleInput = document.getElementById("new-course-title");
-        const title = titleInput.value.trim();
+        const title = titleInput ? titleInput.value.trim() : "";
 
         if (!title) {
-            showModalError(newCourseModal, "Course title is required.");
+            showModalError(newCourseModal, "Course name is required.");
             return;
         }
 
-        // Add course title to available set with default 3 credits
+        // Check if course already exists (case-insensitive)
+        const isDuplicate = Array.from(availableCoursesSet).some(c => c.toLowerCase() === title.toLowerCase());
+        if (isDuplicate) {
+            showModalError(newCourseModal, `Course '${title}' already exists. Please enter a unique course name.`);
+            return;
+        }
+
+        // Register course title with default 3 credits
         availableCoursesSet.add(title);
         courseCreditsMap[title] = 3;
 
         // Re-populate Course Dropdown in Map Course modal
         updateMapModalDropdowns(allStudents);
 
-        // Reset form & close modal on success
+        // Refresh unique existing courses list inside New Course modal
+        renderExistingCoursesInNewCourseModal();
+
+        // Reset form on success
         newCourseForm.reset();
+
+        // Close new course modal on success
         closeModal(newCourseModal);
 
         // Show confirmation OK popup
-        showConfirmation(`Course '${title}' created successfully.`);
+        showConfirmation(`Course '${title}' added successfully.`);
     });
 }
 
@@ -596,7 +670,16 @@ if (courseForm) {
             return;
         }
 
-        // Retrieve selected student name for confirmation popup
+        // Retrieve selected student and check if already enrolled in this course
+        const selectedStudent = allStudents.find(s => s.id === studentId);
+        if (selectedStudent && selectedStudent.courses) {
+            const alreadyEnrolled = selectedStudent.courses.some(c => c.course_name.toLowerCase() === courseName.toLowerCase());
+            if (alreadyEnrolled) {
+                showModalError(courseModal, `Student '${selectedStudent.name}' is already enrolled in '${courseName}'. A student cannot be enrolled in the same course twice.`);
+                return;
+            }
+        }
+
         const selectedStudentOption = courseStudentIdSelect.options[courseStudentIdSelect.selectedIndex];
         const studentNameText = selectedStudentOption ? selectedStudentOption.textContent : "Student";
 
@@ -631,13 +714,184 @@ if (courseForm) {
     });
 }
 
+/**
+ * Render all existing unique courses inside the Create New Course modal (without ID column).
+ */
+async function renderExistingCoursesInNewCourseModal() {
+    if (!newCourseModalListContainer) return;
+
+    let dbCourses = [];
+    try {
+        dbCourses = await fetchAPI("/courses/");
+        if (dbCourses && Array.isArray(dbCourses)) {
+            dbCourses.forEach(c => {
+                availableCoursesSet.add(c.course_name);
+                if (c.credits) courseCreditsMap[c.course_name] = c.credits;
+            });
+        }
+    } catch (e) {
+        // Fall back to local set if API fails
+    }
+
+    const uniqueCourseNames = Array.from(availableCoursesSet).sort();
+
+    if (uniqueCourseNames.length === 0) {
+        newCourseModalListContainer.innerHTML = '<p class="text-muted">No course names found.</p>';
+        return;
+    }
+
+    let tableHtml = `
+        <table class="algo-table">
+            <thead>
+                <tr>
+                    <th>Course Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    uniqueCourseNames.forEach(name => {
+        tableHtml += `
+            <tr>
+                <td><strong>${name}</strong></td>
+                <td>
+                    <div style="display: flex; gap: 0.4rem;">
+                        <button type="button" class="btn btn-secondary btn-sm update-course-name-btn" data-course-name="${name}">
+                            ✏️ Update
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm delete-course-name-btn" data-course-name="${name}">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `</tbody></table>`;
+    newCourseModalListContainer.innerHTML = tableHtml;
+}
+
+// Event Delegation on #new-course-modal-list-container for updating or deleting a course
+if (newCourseModalListContainer) {
+    newCourseModalListContainer.addEventListener("click", async (event) => {
+        const updateBtn = event.target.closest(".update-course-name-btn");
+        const deleteBtn = event.target.closest(".delete-course-name-btn");
+
+        if (updateBtn) {
+            const courseName = updateBtn.getAttribute("data-course-name");
+            if (!courseName) return;
+
+            document.getElementById("old-course-name").value = courseName;
+            document.getElementById("new-course-name-input").value = courseName;
+            openModal(updateCourseModal);
+        } else if (deleteBtn) {
+            const courseName = deleteBtn.getAttribute("data-course-name");
+            if (!courseName) return;
+
+            try {
+                // Fetch all matching course enrollments from the database to get their course IDs
+                const dbCourses = await fetchAPI("/courses/");
+                const matching = (dbCourses && Array.isArray(dbCourses))
+                    ? dbCourses.filter(c => c.course_name.toLowerCase() === courseName.toLowerCase())
+                    : [];
+
+                // Delete each course enrollment by its course_id using DELETE /courses/{course_id}
+                if (matching.length > 0) {
+                    for (const c of matching) {
+                        await fetchAPI(`/courses/${c.id}`, {
+                            method: "DELETE",
+                        });
+                    }
+                }
+
+                // Remove from local sets
+                availableCoursesSet.delete(courseName);
+                delete courseCreditsMap[courseName];
+
+                // Reload roster so deleted course is unmapped from student cards immediately
+                await loadRoster(minAgeInput ? minAgeInput.value : null);
+                updateMapModalDropdowns(allStudents);
+
+                // Refresh existing courses list in modal
+                await renderExistingCoursesInNewCourseModal();
+
+                // Close new course modal on deletion
+                closeModal(newCourseModal);
+
+                showConfirmation(`Course '${courseName}' deleted successfully.`);
+            } catch (e) {
+                showModalError(newCourseModal, e.message || "Failed to delete course.");
+            }
+        }
+    });
+}
+
+/**
+ * Form: #update-course-form Submit Handler (PATCH /courses/{course_id}).
+ */
+if (updateCourseForm) {
+    updateCourseForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        hideModalErrors();
+
+        const oldName = document.getElementById("old-course-name").value.trim();
+        const newName = document.getElementById("new-course-name-input").value.trim();
+
+        if (!newName) {
+            showModalError(updateCourseModal, "Please enter a valid course name.");
+            return;
+        }
+
+        try {
+            // Find all matching course enrollments from SQLite database
+            const dbCourses = await fetchAPI("/courses/");
+            const matching = (dbCourses && Array.isArray(dbCourses))
+                ? dbCourses.filter(c => c.course_name.toLowerCase() === oldName.toLowerCase())
+                : [];
+
+            // Update each course enrollment in-place by its exact ID using PATCH /courses/{course_id}
+            if (matching.length > 0) {
+                for (const c of matching) {
+                    await fetchAPI(`/courses/${c.id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ course_name: newName }),
+                    });
+                }
+            }
+
+            // Update local state sets and maps in-place
+            availableCoursesSet.delete(oldName);
+            availableCoursesSet.add(newName);
+            if (courseCreditsMap[oldName]) {
+                courseCreditsMap[newName] = courseCreditsMap[oldName];
+                delete courseCreditsMap[oldName];
+            }
+
+            closeModal(updateCourseModal);
+            closeModal(newCourseModal);
+            await loadRoster(minAgeInput ? minAgeInput.value : null);
+            updateMapModalDropdowns(allStudents);
+            await renderExistingCoursesInNewCourseModal();
+
+            showConfirmation(`Course '${oldName}' updated to '${newName}' successfully.`);
+        } catch (e) {
+            showModalError(updateCourseModal, e.message || "Failed to update course name.");
+        }
+    });
+}
+
 // Modal Event Listeners
 if (openStudentModalBtn) {
     openStudentModalBtn.addEventListener("click", () => openModal(studentModal));
 }
 
 if (openNewCourseModalBtn) {
-    openNewCourseModalBtn.addEventListener("click", () => openModal(newCourseModal));
+    openNewCourseModalBtn.addEventListener("click", () => {
+        openModal(newCourseModal);
+        renderExistingCoursesInNewCourseModal();
+    });
 }
 
 if (openCourseModalBtn) {
@@ -648,8 +902,16 @@ if (closeStudentModalBtn) {
     closeStudentModalBtn.addEventListener("click", () => closeModal(studentModal));
 }
 
+if (closeEditStudentModalBtn) {
+    closeEditStudentModalBtn.addEventListener("click", () => closeModal(editStudentModal));
+}
+
 if (closeNewCourseModalBtn) {
     closeNewCourseModalBtn.addEventListener("click", () => closeModal(newCourseModal));
+}
+
+if (closeUpdateCourseModalBtn) {
+    closeUpdateCourseModalBtn.addEventListener("click", () => closeModal(updateCourseModal));
 }
 
 if (closeCourseModalBtn) {
@@ -661,7 +923,14 @@ if (closeConfirmModalBtn) {
 }
 
 if (confirmOkBtn) {
-    confirmOkBtn.addEventListener("click", () => closeModal(confirmationModal));
+    confirmOkBtn.addEventListener("click", () => {
+        closeModal(confirmationModal);
+        closeModal(newCourseModal);
+        closeModal(studentModal);
+        closeModal(editStudentModal);
+        closeModal(updateCourseModal);
+        closeModal(courseModal);
+    });
 }
 
 // Cancel Buttons inside Modals
@@ -868,7 +1137,9 @@ if (runReportBtn && reportMinAgeInput) {
 // Close Modal when clicking outside modal-content (backdrop click)
 window.addEventListener("click", (event) => {
     if (event.target === studentModal) closeModal(studentModal);
+    if (event.target === editStudentModal) closeModal(editStudentModal);
     if (event.target === newCourseModal) closeModal(newCourseModal);
+    if (event.target === updateCourseModal) closeModal(updateCourseModal);
     if (event.target === courseModal) closeModal(courseModal);
     if (event.target === confirmationModal) closeModal(confirmationModal);
 });
@@ -877,7 +1148,9 @@ window.addEventListener("click", (event) => {
 window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
         closeModal(studentModal);
+        closeModal(editStudentModal);
         closeModal(newCourseModal);
+        closeModal(updateCourseModal);
         closeModal(courseModal);
         closeModal(confirmationModal);
     }
@@ -894,12 +1167,105 @@ clearFilterBtn.addEventListener("click", () => {
     loadRoster();
 });
 
+// --- Part 3: AI Assistant Handlers ---
+const aiNotesTextarea = document.getElementById("ai-notes-textarea");
+const aiSummarizeBtn = document.getElementById("ai-summarize-btn");
+const aiSummarizeResults = document.getElementById("ai-summarize-results");
+
+const aiSearchQueryInput = document.getElementById("ai-search-query-input");
+const aiSearchBtn = document.getElementById("ai-search-btn");
+const aiSearchResults = document.getElementById("ai-search-results");
+
+// Part 3 Handler 1: Note Summarizer (POST /assistant/summarize)
+if (aiSummarizeBtn && aiNotesTextarea && aiSummarizeResults) {
+    const handleSummarize = async () => {
+        const rawText = aiNotesTextarea.value || "";
+        aiSummarizeResults.innerHTML = `<p class="text-muted">⏳ Summarizing notes...</p>`;
+        try {
+            const summary = await fetchAPI("/assistant/summarize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: rawText })
+            });
+
+            const diffBadgeClass = summary.difficulty === "easy" 
+                ? "badge-green" 
+                : (summary.difficulty === "medium" ? "badge-blue" : "badge-purple");
+
+            const keyPointsHtml = summary.key_points && summary.key_points.length > 0
+                ? `<ul style="margin: 0.5rem 0 0 1.25rem; padding: 0;">${summary.key_points.map(kp => `<li style="margin-bottom: 0.25rem;">${kp}</li>`).join("")}</ul>`
+                : `<p class="text-muted">No key points extracted.</p>`;
+
+            aiSummarizeResults.innerHTML = `
+                <div class="search-match-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="margin: 0; font-size: 1.05rem;">Topic: ${summary.topic}</h4>
+                        <span class="badge ${diffBadgeClass}">Difficulty: ${summary.difficulty.toUpperCase()}</span>
+                    </div>
+                    <div style="margin-top: 0.5rem;">
+                        <strong>Key Points:</strong>
+                        ${keyPointsHtml}
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            aiSummarizeResults.innerHTML = `<p class="error-text">❌ ${e.message || "Failed to generate note summary."}</p>`;
+        }
+    };
+
+    aiSummarizeBtn.addEventListener("click", handleSummarize);
+}
+
+// Part 3 Handler 2: Semantic Search (GET /assistant/search?query=...)
+if (aiSearchBtn && aiSearchQueryInput && aiSearchResults) {
+    const handleSearch = async () => {
+        const query = aiSearchQueryInput.value || "";
+        aiSearchResults.innerHTML = `<p class="text-muted">⏳ Searching notes...</p>`;
+        try {
+            const rankedNotes = await fetchAPI(`/assistant/search?query=${encodeURIComponent(query)}`);
+
+            let html = `<div style="display: flex; flex-direction: column; gap: 0.5rem;">`;
+            rankedNotes.forEach((note, idx) => {
+                const isTopRank = idx === 0 && note.score > 0;
+                const scoreColor = note.score > 0 ? "#4ade80" : "var(--text-muted)";
+                const rankTextColor = (isTopRank || note.score > 0) ? "#4ade80" : "inherit";
+                const rowStyle = isTopRank
+                    ? "flex-direction: column; align-items: flex-start; gap: 0.25rem; background: rgba(34, 197, 94, 0.1); border-left: 3px solid #4ade80;"
+                    : "flex-direction: column; align-items: flex-start; gap: 0.25rem;";
+
+                html += `
+                    <div class="sorted-row" style="${rowStyle}">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <strong style="color: ${rankTextColor};">Rank #${idx + 1} (Note ID #${note.id})</strong>
+                            <span style="color: ${scoreColor}; font-weight: 600;">Score: ${note.score}</span>
+                        </div>
+                        <p style="margin: 0; font-size: 0.88rem; color: var(--text-color);">${note.text}</p>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            aiSearchResults.innerHTML = html;
+        } catch (e) {
+            aiSearchResults.innerHTML = `<p class="error-text">❌ ${e.message || "Failed to perform semantic note search."}</p>`;
+        }
+    };
+
+    aiSearchBtn.addEventListener("click", handleSearch);
+    aiSearchQueryInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleSearch();
+    });
+}
+
 // Close Error Banner Handler
 if (closeErrorBtn) {
     closeErrorBtn.addEventListener("click", hideError);
 }
 
 // Initial Load on Page Startup
-document.addEventListener("DOMContentLoaded", () => {
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+        loadRoster();
+    });
+} else {
     loadRoster();
-});
+}

@@ -3,21 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="StudyTrack - High Performance Full-Stack Student Roster, Algorithms Engine & AI Assistant Dashboard">
+    <meta name="description" content="StudyTrack - Student Roster, Algorithms Engine & AI Assistant Dashboard">
     <title>StudyTrack Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header class="app-header">
         <div class="header-container">
             <div class="brand">
-                <span class="brand-icon">🎓</span>
                 <h1>StudyTrack Dashboard</h1>
             </div>
-            <p class="tagline">Full-Stack Student Roster, Algorithms Engine &amp; AI Assistant</p>
+            <p class="tagline">Student Roster, Algorithms Engine &amp; AI Assistant</p>
         </div>
     </header>
 
@@ -49,7 +45,6 @@
             <div class="algo-dashboard-header">
                 <div class="section-header">
                     <h2>Student Roster Management</h2>
-                    <span class="live-indicator"><span class="dot"></span> Live DB Sync</span>
                 </div>
             </div>
             <div class="app-nav">
@@ -96,7 +91,6 @@
                 <div class="algo-card">
                     <div class="algo-card-header">
                         <h3>1. Hand-Written Insertion Sort</h3>
-                        <span class="badge badge-purple">In-Place O(n²)</span>
                     </div>
                     <p class="algo-desc">Sorts live student records in place ascending by <strong>Age</strong> or <strong>Name</strong> without calling built-in <code>sort()</code> or <code>sorted()</code> utilities.</p>
                     <div class="algo-controls-row">
@@ -105,23 +99,22 @@
                             <option value="age">Age (Ascending)</option>
                             <option value="name">Name (Alphabetical)</option>
                         </select>
-                        <button id="run-sort-btn" class="btn btn-secondary btn-block-sm">⚡ Insertion Sort</button>
+                        <button id="run-sort-btn" class="btn btn-secondary btn-block-sm">Insertion Sort</button>
                     </div>
                     <div id="sort-results-container" class="algo-results-box">
                         <p class="text-muted">Click 'Insertion Sort' to execute the algorithm.</p>
                     </div>
                 </div>
 
-                <!-- Card 2: Hand-Written Binary Search Engine -->
+                
                 <div class="algo-card">
                     <div class="algo-card-header">
                         <h3>2. Hand-Written Binary Search</h3>
-                        <span class="badge badge-green">Iterative O(log n)</span>
                     </div>
                     <p class="algo-desc">Pre-sorts records alphabetically by name and performs a binary search using overflow-safe midpoint <code>mid = low + (high - low) // 2</code>.</p>
                     <div class="algo-controls-row">
                         <input type="text" id="search-name-input" placeholder="Exact Name (e.g. Priya Iyer)" autocomplete="off">
-                        <button id="run-search-btn" class="btn btn-primary btn-block-sm">🔍 Binary Search</button>
+                        <button id="run-search-btn" class="btn btn-primary btn-block-sm">Binary Search</button>
                     </div>
                     <div id="search-results-container" class="algo-results-box">
                         <p class="text-muted">Enter a student's exact name above to search.</p>
@@ -132,13 +125,12 @@
                 <div class="algo-card full-width">
                     <div class="algo-card-header">
                         <h3>3. Roster Report Generator &amp; Min Age Counter</h3>
-                        <span class="badge badge-blue">Report Engine</span>
                     </div>
                     <p class="algo-desc">Displays student records and counts students matching the selected minimum age.</p>
                     <div class="algo-controls-row">
                         <label for="report-min-age-input">Min age:</label>
                         <input type="number" id="report-min-age-input" placeholder="21" value="21" min="1" autocomplete="off">
-                        <button id="run-report-btn" class="btn btn-save">📋 Roster Report</button>
+                        <button id="run-report-btn" class="btn btn-save">📋Roster Report</button>
                         <span id="report-count-badge" class="badge badge-blue hidden">Students Aged &ge; 21: 0</span>
                     </div>
                     <div id="report-results-container" class="algo-results-box">
@@ -149,16 +141,46 @@
         </div>
 
         
+        
         <div id="tab-part3" class="tab-content hidden">
             <div class="algo-dashboard-header">
-                <h2>Integrated AI Assistant</h2>
-                <p class="algo-subtitle">Smart AI natural language queries</p>
+                <h2>Integrated AI Assistant Helper</h2>
             </div>
-            
-            <div class="placeholder-card">
-                <span class="placeholder-icon"></span>
-                <h3>AI Assistant Module</h3>
-                <p>AI Assistant features </p>
+
+            <div class="algo-grid">
+                
+                <div class="algo-card">
+                    <div class="algo-card-header">
+                        <h3>1. Note Summarizer</h3>
+                        <span class="badge badge-purple">Structured Output</span>
+                    </div>
+                    <p class="algo-desc">Paste raw study notes below to deterministically extract topic, key points, and difficulty rating.</p>
+                    <div class="form-group">
+                        <textarea id="ai-notes-textarea" class="textarea-input" rows="4" placeholder="Paste your study notes here..." autocomplete="off"></textarea>
+                    </div>
+                    <div class="algo-controls-row">
+                        <button id="ai-summarize-btn" class="btn btn-save">✨ Summarize Notes</button>
+                    </div>
+                    <div id="ai-summarize-results" class="algo-results-box">
+                        <p class="text-muted">Paste notes above and click 'Summarize Notes' to generate output.</p>
+                    </div>
+                </div>
+
+                
+                <div class="algo-card">
+                    <div class="algo-card-header">
+                        <h3>2. Semantic Search Engine</h3>
+                        <span class="badge badge-green">12D Mock Embeddings</span>
+                    </div>
+                    <p class="algo-desc">Search study notes using word-frequency embedding vectors and first-principles cosine similarity.</p>
+                    <div class="algo-controls-row">
+                        <input type="text" id="ai-search-query-input" placeholder="Enter query (e.g. binary search algorithm)" autocomplete="off">
+                        <button id="ai-search-btn" class="btn btn-primary btn-block-sm">🔍 Search Notes</button>
+                    </div>
+                    <div id="ai-search-results" class="algo-results-box">
+                        <p class="text-muted">Enter a query above to rank the 5 sample notes by similarity.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -200,23 +222,29 @@
     <div id="new-course-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="new-course-modal-title" aria-modal="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="new-course-modal-title">Create New Course</h2>
+                <h2 id="new-course-modal-title">New Course</h2>
                 <button type="button" id="close-new-course-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
             </div>
             <div id="new-course-modal-error" class="modal-error-banner hidden" role="alert"></div>
             <form id="new-course-form" class="student-form" autocomplete="off" novalidate>
                 <div class="form-group">
-                    <label for="new-course-title">Course Title <span class="required">*</span></label>
+                    <label for="new-course-title">Course Name <span class="required">*</span></label>
                     <input type="text" id="new-course-title" placeholder="e.g. Machine Learning" autocomplete="off" required>
                 </div>
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
                     <button type="submit" class="btn btn-secondary">
-                        <span>📘Add Course</span>
+                        <span>📘 Add Course</span>
                     </button>
                 </div>
             </form>
+            <div class="existing-courses-section" style="margin-top: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                <h4 style="margin-bottom: 0.4rem; font-size: 0.9rem; color: var(--text-color);">Course Names</h4>
+                <div id="new-course-modal-list-container" style="max-height: 120px; overflow-y: auto;">
+                    <p class="text-muted" style="font-size: 0.85rem;">Loading courses...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -253,6 +281,64 @@
                     <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
                     <button type="submit" class="btn btn-save">
                         <span>🔗Map Course to Student</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    
+    <div id="edit-student-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="edit-student-modal-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="edit-student-modal-title">Edit Student Details</h2>
+                <button type="button" id="close-edit-student-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            <div id="edit-student-modal-error" class="modal-error-banner hidden" role="alert"></div>
+            <form id="edit-student-form" class="student-form" autocomplete="off" novalidate>
+                <input type="hidden" id="edit-student-id">
+                <div class="form-group">
+                    <label for="edit-student-name">Full Name <span class="required">*</span></label>
+                    <input type="text" id="edit-student-name" placeholder="Full Name" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-student-email">Email Address <span class="required">*</span></label>
+                    <input type="email" id="edit-student-email" placeholder="student@university.edu" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-student-age">Age <span class="required">*</span></label>
+                    <input type="number" id="edit-student-age" placeholder="Age" min="1" autocomplete="off" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span>💾Save Changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <div id="update-course-modal" class="modal-overlay hidden" role="dialog" aria-labelledby="update-course-modal-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="update-course-modal-title">Update Course Name</h2>
+                <button type="button" id="close-update-course-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            <div id="update-course-modal-error" class="modal-error-banner hidden" role="alert"></div>
+            <form id="update-course-form" class="student-form" autocomplete="off" novalidate>
+                <input type="hidden" id="update-course-id">
+                <input type="hidden" id="old-course-name">
+                <div class="form-group">
+                    <label for="new-course-name-input">New Course Name <span class="required">*</span></label>
+                    <input type="text" id="new-course-name-input" placeholder="e.g. Advanced Machine Learning" autocomplete="off" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost cancel-modal-btn">Cancel</button>
+                    <button type="submit" class="btn btn-save">
+                        <span>💾Update Course</span>
                     </button>
                 </div>
             </form>

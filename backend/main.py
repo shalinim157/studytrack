@@ -17,6 +17,8 @@ from backend.schemas import (
     CourseUpdate,
     CourseResponse,
     StudentCourseCountResponse,
+    SummarizeRequest,
+    SummarizeResponse,
 )
 import backend.crud as crud
 from backend.seed_data import seed_database
@@ -25,6 +27,10 @@ from backend.algorithms import (
     binary_search_by_name,
     format_roster_report,
     count_students_meeting_min_age,
+)
+from backend.ai_service import (
+    summarize_notes,
+    search_notes_by_query,
 )
 
 @asynccontextmanager
@@ -79,7 +85,19 @@ def create_student_endpoint(student: StudentCreate, db: Session = Depends(get_db
 
 @app.get("/students/",response_model=List[StudentResponse],summary="List all students (with optional min_age filter)",)
 def list_students_endpoint(min_age: Optional[int] = Query(None, description="Filter students with age >= min_age"),db: Session = Depends(get_db),):
+    from backend.models import Student
+    if db.query(Student).count() == 0:
+        seed_database(db)
     return crud.get_students(db=db, min_age=min_age)
+
+@app.post("/students/reseed", summary="Clear and re-seed the default 8-student roster dataset")
+def reseed_database_endpoint(db: Session = Depends(get_db)):
+    from backend.models import Student, Course
+    db.query(Course).delete()
+    db.query(Student).delete()
+    db.commit()
+    seed_database(db)
+    return {"message": "Database successfully re-seeded with original 8-student dataset."}
 
 
 @app.get("/students/sorted",response_model=List[StudentResponse],summary="Get students sorted by age or name using hand-written Insertion Sort",)
@@ -203,8 +221,16 @@ def get_course_endpoint(course_id: int, db: Session = Depends(get_db)):
         )
     return course
 
-@app.patch("/courses/{course_id}",response_model=CourseResponse,summary="Partially update course details",)
-def update_course_endpoint(course_id: int,course_update: CourseUpdate,db: Session = Depends(get_db),):
+@app.patch(
+    "/courses/{course_id}",
+    response_model=CourseResponse,
+    summary="Partially update course details",
+)
+def update_course_endpoint(
+    course_id: int,
+    course_update: CourseUpdate,
+    db: Session = Depends(get_db),
+):
     updated_course = crud.update_course(db=db, course_id=course_id, course_update=course_update)
     if not updated_course:
         raise HTTPException(
@@ -220,6 +246,27 @@ def delete_course_endpoint(course_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Course with ID {course_id} not found.",
         )
     return {"message": f"Course with ID {course_id} successfully deleted."}
+
+
+
+# --- Part 3: AI Assistant Endpoints ---
+
+@app.post(
+    "/assistant/summarize",
+    response_model=SummarizeResponse,
+    summary="Summarize raw study notes into a fixed-shape JSON object",
+)
+def summarize_assistant_endpoint(payload: SummarizeRequest):
+    return summarize_notes(raw_text=payload.text)
+
+@app.get(
+    "/assistant/search",
+    summary="Rank sample study notes using mock embeddings and cosine similarity",
+)
+def search_assistant_endpoint(
+    query: str = Query("", description="Query text to rank study notes against")
+):
+    return search_notes_by_query(query=query)
 
 
 # --- Static Files Mount (Single-process mode: MUST be mounted last) ---
