@@ -672,6 +672,199 @@ document.querySelectorAll(".cancel-modal-btn").forEach(btn => {
     });
 });
 
+// Tab Component Switching
+const tabButtons = document.querySelectorAll(".tab-btn");
+const tabContents = document.querySelectorAll(".tab-content");
+
+tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        const targetTabId = btn.getAttribute("data-tab");
+        
+        tabButtons.forEach(b => b.classList.remove("active"));
+        tabContents.forEach(c => c.classList.add("hidden"));
+
+        btn.classList.add("active");
+        const targetContent = document.getElementById(targetTabId);
+        if (targetContent) {
+            targetContent.classList.remove("hidden");
+        }
+    });
+});
+
+// Part 2 DOM Elements
+const sortBySelect = document.getElementById("sort-by-select");
+const runSortBtn = document.getElementById("run-sort-btn");
+const sortResultsContainer = document.getElementById("sort-results-container");
+
+const searchNameInput = document.getElementById("search-name-input");
+const runSearchBtn = document.getElementById("run-search-btn");
+const searchResultsContainer = document.getElementById("search-results-container");
+
+const reportMinAgeInput = document.getElementById("report-min-age-input");
+const runReportBtn = document.getElementById("run-report-btn");
+const reportCountBadge = document.getElementById("report-count-badge");
+const reportResultsContainer = document.getElementById("report-results-container");
+const reportOutputText = document.getElementById("report-output-text");
+
+// Part 2 Handler 1: Run Insertion Sort (GET /students/sorted?by=field)
+if (runSortBtn && sortBySelect) {
+    runSortBtn.addEventListener("click", async () => {
+        const field = sortBySelect.value || "age";
+        try {
+            const sortedStudents = await fetchAPI(`/students/sorted?by=${encodeURIComponent(field)}`);
+            
+            // Update Part 1 Roster list so Part 1 tab reflects the sorted order
+            renderRoster(sortedStudents);
+
+            // Render sorted results cleanly inside Part 2 Tab Card as an HTML Table
+            if (sortResultsContainer) {
+                let tableHtml = `
+                    <table class="algo-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                sortedStudents.forEach(s => {
+                    tableHtml += `
+                        <tr>
+                            <td><strong>${s.name}</strong></td>
+                            <td>${s.age}</td>
+                            <td>${s.email}</td>
+                        </tr>
+                    `;
+                });
+                tableHtml += `</tbody></table>`;
+                sortResultsContainer.innerHTML = tableHtml;
+            }
+        } catch (e) {
+            if (sortResultsContainer) {
+                sortResultsContainer.innerHTML = `<p class="error-text">❌ ${e.message || "Failed to execute Insertion Sort."}</p>`;
+            }
+        }
+    });
+}
+
+// Part 2 Handler 2: Binary Search by Name (GET /students/search?name=exact)
+if (runSearchBtn && searchNameInput) {
+    runSearchBtn.addEventListener("click", async () => {
+        const searchName = searchNameInput.value.trim();
+        if (!searchName) {
+            if (searchResultsContainer) {
+                searchResultsContainer.innerHTML = `<p class="error-text">⚠️ Please enter an exact student name to perform Binary Search.</p>`;
+            }
+            return;
+        }
+
+        try {
+            const matchedStudent = await fetchAPI(`/students/search?name=${encodeURIComponent(searchName)}`);
+            
+            if (searchResultsContainer) {
+                const courseNames = matchedStudent.courses && matchedStudent.courses.length > 0
+                    ? matchedStudent.courses.map(c => `${c.course_name} (${c.credits} cr)`).join(", ")
+                    : "None";
+
+                searchResultsContainer.innerHTML = `
+                    <div class="search-match-card">
+                        <span class="match-badge">✅ Student Found</span>
+                        <table class="algo-table">
+                            <tbody>
+                                <tr>
+                                    <th>Name</th>
+                                    <td><strong>${matchedStudent.name}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Age</th>
+                                    <td>${matchedStudent.age}</td>
+                                </tr>
+                                <tr>
+                                    <th>Email</th>
+                                    <td>${matchedStudent.email}</td>
+                                </tr>
+                                <tr>
+                                    <th>Enrolled Courses</th>
+                                    <td>${courseNames}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            if (searchResultsContainer) {
+                searchResultsContainer.innerHTML = `
+                    <div class="search-match-card error">
+                        <span class="match-badge error">❌ Student Not Found</span>
+                        <p>${e.message || `Student '${searchName}' not found in roster.`}</p>
+                    </div>
+                `;
+            }
+        }
+    });
+}
+
+// Part 2 Handler 3: Generate Roster Report (GET /students/report?min_age=n)
+if (runReportBtn && reportMinAgeInput) {
+    runReportBtn.addEventListener("click", async () => {
+        const minAgeVal = parseInt(reportMinAgeInput.value, 10) || 21;
+        try {
+            const reportData = await fetchAPI(`/students/report?min_age=${minAgeVal}`);
+            const studentsList = await fetchAPI("/students/");
+            
+            // Filter to ONLY students meeting age >= minAgeVal
+            const matchingStudents = studentsList.filter(s => s.age >= minAgeVal);
+
+            if (reportCountBadge) {
+                reportCountBadge.textContent = `Students Aged ≥ ${minAgeVal}: ${reportData.count_meeting_min_age}`;
+                reportCountBadge.classList.remove("hidden");
+            }
+
+            if (reportResultsContainer) {
+                if (!matchingStudents || matchingStudents.length === 0) {
+                    reportResultsContainer.innerHTML = `<p class="text-muted">No student ages ${minAgeVal} or older found in the roster.</p>`;
+                } else {
+                    let tableHtml = `
+                        <table class="algo-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Age</th>
+                                    <th>Email</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    studentsList.forEach(s => {
+                        const isMatch = s.age >= minAgeVal;
+                        const nameHtml = isMatch
+                            ? `<span class="highlight-green">${s.name}</span>`
+                            : `<span>${s.name}</span>`;
+
+                        tableHtml += `
+                            <tr class="${isMatch ? 'row-highlight-green' : ''}">
+                                <td>${nameHtml}</td>
+                                <td>${s.age}</td>
+                                <td>${s.email}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tableHtml += `</tbody></table>`;
+                    reportResultsContainer.innerHTML = tableHtml;
+                }
+                reportResultsContainer.classList.remove("hidden");
+            }
+        } catch (e) {
+            showError(e.message || "Failed to generate roster report.");
+        }
+    });
+}
+
 // Close Modal when clicking outside modal-content (backdrop click)
 window.addEventListener("click", (event) => {
     if (event.target === studentModal) closeModal(studentModal);

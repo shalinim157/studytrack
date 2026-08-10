@@ -20,6 +20,12 @@ from backend.schemas import (
 )
 import backend.crud as crud
 from backend.seed_data import seed_database
+from backend.algorithms import (
+    insertion_sort_by_field,
+    binary_search_by_name,
+    format_roster_report,
+    count_students_meeting_min_age,
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,7 +45,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Task 6: CORS Configuration (Explicitly naming http://localhost:5500, never wildcard "*")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -53,28 +59,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Utility Handlers to eliminate browser 404 console noise
-FAVICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎓</text></svg>"""
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon_endpoint():
-    return Response(content=FAVICON_SVG, media_type="image/svg+xml")
-
-@app.get("/.well-known/appspecific/com.chrome.devtools.json", include_in_schema=False)
-async def chrome_devtools_json_endpoint():
-    return Response(status_code=204)
-
-
-# --- Student Endpoints ---
-
-@app.post(
-    "/students/",
-    response_model=StudentResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a new student",
-)
+@app.post("/students/",response_model=StudentResponse,status_code=status.HTTP_201_CREATED,summary="Create a new student",)
 def create_student_endpoint(student: StudentCreate, db: Session = Depends(get_db)):
-    # Check for existing email to prevent integrity crashes
+    
     existing = crud.get_student_by_email(db, student.email)
     if existing:
         raise HTTPException(
@@ -90,22 +77,48 @@ def create_student_endpoint(student: StudentCreate, db: Session = Depends(get_db
             detail="Database integrity error. Email must be unique.",
         )
 
-@app.get(
-    "/students/",
-    response_model=List[StudentResponse],
-    summary="List all students (with optional min_age filter)",
-)
-def list_students_endpoint(
-    min_age: Optional[int] = Query(None, description="Filter students with age >= min_age"),
-    db: Session = Depends(get_db),
-):
+@app.get("/students/",response_model=List[StudentResponse],summary="List all students (with optional min_age filter)",)
+def list_students_endpoint(min_age: Optional[int] = Query(None, description="Filter students with age >= min_age"),db: Session = Depends(get_db),):
     return crud.get_students(db=db, min_age=min_age)
 
-@app.get(
-    "/students/{student_id}",
-    response_model=StudentResponse,
-    summary="Get a single student by ID",
-)
+
+@app.get("/students/sorted",response_model=List[StudentResponse],summary="Get students sorted by age or name using hand-written Insertion Sort",)
+def get_sorted_students(by: str = Query("age", description="Field to sort by ('age' or 'name')"),db: Session = Depends(get_db),):
+    if by not in ("age", "name"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Query parameter 'by' must be 'age' or 'name'.",
+        )
+    students_orm = crud.get_students(db=db)
+    students_dicts = [StudentResponse.model_validate(s).model_dump() for s in students_orm]
+    sorted_dicts = insertion_sort_by_field(students_dicts, field=by)
+    return sorted_dicts
+
+@app.get("/students/search",response_model=StudentResponse,summary="Search student by exact name using hand-written Binary Search",)
+def search_student_by_name(name: str = Query(..., description="Exact student name to search for"),db: Session = Depends(get_db),):
+    students_orm = crud.get_students(db=db)
+    students_dicts = [StudentResponse.model_validate(s).model_dump() for s in students_orm]
+    name_sorted_students = sorted(students_dicts, key=lambda x: x["name"])
+    result = binary_search_by_name(name_sorted_students, name=name)
+    if result == -1 or isinstance(result, int):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Student with name '{name}' not found.",
+        )
+    return result
+
+@app.get("/students/report",summary="Generate Roster Report and count students meeting minimum age",)
+def get_roster_report(min_age: int = Query(21, description="Minimum age filter for report"),    db: Session = Depends(get_db),):
+    students_orm = crud.get_students(db=db)
+    students_dicts = [StudentResponse.model_validate(s).model_dump() for s in students_orm]
+    report_text = format_roster_report(students_dicts)
+    count = count_students_meeting_min_age(students_dicts, min_age=min_age)
+    return {
+        "report": report_text,
+        "count_meeting_min_age": count,
+    }
+
+@app.get("/students/{student_id}",response_model=StudentResponse,summary="Get a single student by ID",)
 def get_student_endpoint(student_id: int, db: Session = Depends(get_db)):
     student = crud.get_student(db=db, student_id=student_id)
     if not student:
@@ -115,16 +128,8 @@ def get_student_endpoint(student_id: int, db: Session = Depends(get_db)):
         )
     return student
 
-@app.patch(
-    "/students/{student_id}",
-    response_model=StudentResponse,
-    summary="Partially update student record",
-)
-def update_student_endpoint(
-    student_id: int,
-    student_update: StudentUpdate,
-    db: Session = Depends(get_db),
-):
+@app.patch("/students/{student_id}",response_model=StudentResponse,summary="Partially update student record",)
+def update_student_endpoint(student_id: int,student_update: StudentUpdate,db: Session = Depends(get_db),):
     if student_update.email:
         existing = crud.get_student_by_email(db, student_update.email)
         if existing and existing.id != student_id:
@@ -141,11 +146,7 @@ def update_student_endpoint(
         )
     return updated_student
 
-@app.delete(
-    "/students/{student_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Delete a student record",
-)
+@app.delete("/students/{student_id}",status_code=status.HTTP_200_OK,summary="Delete a student record",)
 def delete_student_endpoint(student_id: int, db: Session = Depends(get_db)):
     success = crud.delete_student(db=db, student_id=student_id)
     if not success:
@@ -155,11 +156,7 @@ def delete_student_endpoint(student_id: int, db: Session = Depends(get_db)):
         )
     return {"message": f"Student with ID {student_id} successfully deleted."}
 
-@app.get(
-    "/students/{student_id}/course-count",
-    response_model=StudentCourseCountResponse,
-    summary="Get course count for a student via DB aggregate query",
-)
+@app.get("/students/{student_id}/course-count",response_model=StudentCourseCountResponse,summary="Get course count for a student via DB aggregate query",)
 def get_student_course_count_endpoint(student_id: int, db: Session = Depends(get_db)):
     student = crud.get_student(db=db, student_id=student_id)
     if not student:
@@ -170,15 +167,7 @@ def get_student_course_count_endpoint(student_id: int, db: Session = Depends(get
     count = crud.get_student_course_count(db=db, student_id=student_id)
     return {"student_id": student_id, "course_count": count}
 
-
-# --- Course Endpoints ---
-
-@app.post(
-    "/courses/",
-    response_model=CourseResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a new course enrollment",
-)
+@app.post("/courses/",response_model=CourseResponse,status_code=status.HTTP_201_CREATED,summary="Create a new course enrollment",)
 def create_course_endpoint(course: CourseCreate, db: Session = Depends(get_db)):
     student = crud.get_student(db=db, student_id=course.student_id)
     if not student:
@@ -187,7 +176,6 @@ def create_course_endpoint(course: CourseCreate, db: Session = Depends(get_db)):
             detail=f"Cannot enroll course: Student with ID {course.student_id} does not exist.",
         )
     
-    # Enforce: one student with different courses, NOT duplicate same course for same student
     existing_enrollment = crud.get_student_course_by_name(db, course.student_id, course.course_name)
     if existing_enrollment:
         raise HTTPException(
@@ -203,38 +191,20 @@ def create_course_endpoint(course: CourseCreate, db: Session = Depends(get_db)):
             detail=f"Student '{student.name}' is already enrolled in '{course.course_name}'.",
         )
 
-@app.get(
-    "/courses/",
-    response_model=List[CourseResponse],
-    summary="List all courses",
-)
+@app.get("/courses/",response_model=List[CourseResponse],summary="List all courses",)
 def list_courses_endpoint(db: Session = Depends(get_db)):
     return crud.get_courses(db=db)
-
 @app.get(
-    "/courses/{course_id}",
-    response_model=CourseResponse,
-    summary="Get a single course by ID",
-)
+"/courses/{course_id}",response_model=CourseResponse,summary="Get a single course by ID",)
 def get_course_endpoint(course_id: int, db: Session = Depends(get_db)):
     course = crud.get_course(db=db, course_id=course_id)
     if not course:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Course with ID {course_id} not found.",
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Course with ID {course_id} not found.",
         )
     return course
 
-@app.patch(
-    "/courses/{course_id}",
-    response_model=CourseResponse,
-    summary="Partially update course details",
-)
-def update_course_endpoint(
-    course_id: int,
-    course_update: CourseUpdate,
-    db: Session = Depends(get_db),
-):
+@app.patch("/courses/{course_id}",response_model=CourseResponse,summary="Partially update course details",)
+def update_course_endpoint(course_id: int,course_update: CourseUpdate,db: Session = Depends(get_db),):
     updated_course = crud.update_course(db=db, course_id=course_id, course_update=course_update)
     if not updated_course:
         raise HTTPException(
@@ -243,17 +213,11 @@ def update_course_endpoint(
         )
     return updated_course
 
-@app.delete(
-    "/courses/{course_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Delete a course enrollment",
-)
+@app.delete("/courses/{course_id}",status_code=status.HTTP_200_OK,summary="Delete a course enrollment",)
 def delete_course_endpoint(course_id: int, db: Session = Depends(get_db)):
     success = crud.delete_course(db=db, course_id=course_id)
     if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Course with ID {course_id} not found.",
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Course with ID {course_id} not found.",
         )
     return {"message": f"Course with ID {course_id} successfully deleted."}
 
