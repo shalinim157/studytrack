@@ -1,20 +1,12 @@
 # Python / Virtual Environment
 __pycache__/
-*.py[cod]
-*$py.class
 venv/
 .venv/
-env/
-ENV/
 
-# Database & Environment Secrets
+# Environment Secrets & Local Configs (Do NOT commit real .env)
+.env
+*.env
+
+# SQLite Database
 *.db
 *.sqlite3
-.env
-.env.local
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
