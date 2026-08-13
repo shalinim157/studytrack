@@ -437,10 +437,15 @@ rosterList.addEventListener("click", async (event) => {
     const removeCourseBtn = event.target.closest(".remove-course-btn");
 
     if (editBtn) {
-        const studentId = editBtn.getAttribute("data-id");
-        const name = editBtn.getAttribute("data-name");
-        const email = editBtn.getAttribute("data-email");
-        const age = editBtn.getAttribute("data-age");
+        const studentId = parseInt(editBtn.getAttribute("data-id"), 10);
+        const card = editBtn.closest(".student-card");
+        
+        // Find latest student record in state or read from card elements
+        const currentStudent = allStudents.find(s => s.id === studentId);
+        
+        const name = currentStudent ? currentStudent.name : (editBtn.getAttribute("data-name") || "");
+        const email = currentStudent ? currentStudent.email : (editBtn.getAttribute("data-email") || "");
+        const age = currentStudent ? currentStudent.age : (card?.querySelector(".inline-age-input")?.value || editBtn.getAttribute("data-age") || "");
 
         document.getElementById("edit-student-id").value = studentId;
         document.getElementById("edit-student-name").value = name;
@@ -465,11 +470,29 @@ rosterList.addEventListener("click", async (event) => {
                 body: JSON.stringify({ age: newAge }),
             });
 
+            // 1. Update text label and input value on card
             const ageLabel = card.querySelector(".age-text-label");
             if (ageLabel) {
                 ageLabel.textContent = `🎂 Age: ${updatedStudent.age}`;
             }
             ageInput.value = updatedStudent.age;
+
+            // 2. Update data attributes on card's Edit button
+            const cardEditBtn = card.querySelector(".edit-student-btn");
+            if (cardEditBtn) {
+                cardEditBtn.setAttribute("data-age", updatedStudent.age);
+                cardEditBtn.setAttribute("data-name", updatedStudent.name);
+                cardEditBtn.setAttribute("data-email", updatedStudent.email);
+            }
+
+            // 3. Update the student in allStudents state
+            const studentInState = allStudents.find(s => s.id === parseInt(studentId, 10));
+            if (studentInState) {
+                studentInState.age = updatedStudent.age;
+                studentInState.name = updatedStudent.name;
+                studentInState.email = updatedStudent.email;
+            }
+
             showConfirmation(`Age for ${updatedStudent.name} updated to ${updatedStudent.age}.`);
         } catch (e) {
             showError(e.message || "Failed to update student age.");
