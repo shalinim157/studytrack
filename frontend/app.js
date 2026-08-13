@@ -3,7 +3,6 @@ const API_BASE_URL = (window.location.origin && window.location.origin.includes(
     ? ""
     : "http://127.0.0.1:8000";
 
-// DOM Elements
 const rosterList = document.getElementById("roster-list");
 const studentForm = document.getElementById("student-form");
 const newCourseForm = document.getElementById("new-course-form");
@@ -117,6 +116,24 @@ function openModal(modalEl) {
 function closeModal(modalEl) {
     if (modalEl) {
         hideModalErrors();
+
+        // 1. Reset any form inside the modal
+        const form = modalEl.querySelector("form");
+        if (form) {
+            form.reset();
+        }
+
+        // 2. Explicitly clear all inputs, textareas, and select dropdowns
+        const inputs = modalEl.querySelectorAll("input, select, textarea");
+        inputs.forEach(input => {
+            if (input.tagName === "SELECT") {
+                input.selectedIndex = 0;
+                input.value = "";
+            } else if (input.type !== "submit" && input.type !== "button" && input.type !== "hidden") {
+                input.value = "";
+            }
+        });
+
         modalEl.classList.add("hidden");
     }
 }
@@ -130,9 +147,7 @@ async function fetchAPI(url, options = {}) {
         const response = await fetch(API_BASE_URL + url, {
             headers: {
                 "Content-Type": "application/json",
-                ...options.headers,
-            },
-            ...options,
+                ...options.headers,},...options,
         });
 
         if (!response.ok) {
@@ -270,7 +285,7 @@ function createStudentCardElement(student) {
     
     const ageText = document.createElement("span");
     ageText.className = "age-text-label";
-    ageText.textContent = `🎂 Age: ${student.age}`;
+    ageText.textContent = `🎂Age: ${student.age}`;
     ageDisplayRow.appendChild(ageText);
 
     // Inline Age Edit Controls
@@ -884,18 +899,30 @@ if (updateCourseForm) {
 
 // Modal Event Listeners
 if (openStudentModalBtn) {
-    openStudentModalBtn.addEventListener("click", () => openModal(studentModal));
+    openStudentModalBtn.addEventListener("click", () => {
+        if (studentForm) studentForm.reset();
+        openModal(studentModal);
+    });
 }
 
 if (openNewCourseModalBtn) {
     openNewCourseModalBtn.addEventListener("click", () => {
+        if (newCourseForm) newCourseForm.reset();
         openModal(newCourseModal);
         renderExistingCoursesInNewCourseModal();
     });
 }
 
 if (openCourseModalBtn) {
-    openCourseModalBtn.addEventListener("click", () => openModal(courseModal));
+    openCourseModalBtn.addEventListener("click", () => {
+        if (courseForm) {
+            courseForm.reset();
+            if (courseStudentIdSelect) courseStudentIdSelect.value = "";
+            if (courseDropdownSelect) courseDropdownSelect.value = "";
+            if (courseCreditsInput) courseCreditsInput.value = "";
+        }
+        openModal(courseModal);
+    });
 }
 
 if (closeStudentModalBtn) {
@@ -941,7 +968,78 @@ document.querySelectorAll(".cancel-modal-btn").forEach(btn => {
     });
 });
 
-// Tab Component Switching
+// Part 2 DOM Elements
+const sortBySelect = document.getElementById("sort-by-select");
+const runSortBtn = document.getElementById("run-sort-btn");
+const sortResultsContainer = document.getElementById("sort-results-container");
+
+const searchNameInput = document.getElementById("search-name-input");
+const runSearchBtn = document.getElementById("run-search-btn");
+const searchResultsContainer = document.getElementById("search-results-container");
+
+const reportMinAgeInput = document.getElementById("report-min-age-input");
+const runReportBtn = document.getElementById("run-report-btn");
+const reportCountBadge = document.getElementById("report-count-badge");
+const reportResultsContainer = document.getElementById("report-results-container");
+const reportOutputText = document.getElementById("report-output-text");
+
+// Part 3 DOM Elements
+const aiNotesTextarea = document.getElementById("ai-notes-textarea");
+const aiSummarizeBtn = document.getElementById("ai-summarize-btn");
+const aiSummarizeResults = document.getElementById("ai-summarize-results");
+
+const aiSearchQueryInput = document.getElementById("ai-search-query-input");
+const aiSearchBtn = document.getElementById("ai-search-btn");
+const aiSearchResults = document.getElementById("ai-search-results");
+
+/**
+ * Reset Part 2 (Algorithms Engine) inputs and results to their initial state.
+ */
+function resetAlgorithmsTab() {
+    if (sortBySelect) sortBySelect.value = "age";
+    if (sortResultsContainer) {
+        sortResultsContainer.innerHTML = '<p class="text-muted">Click \'Insertion Sort\' to execute the algorithm.</p>';
+    }
+    if (searchNameInput) searchNameInput.value = "";
+    if (searchResultsContainer) {
+        searchResultsContainer.innerHTML = '<p class="text-muted">Enter a student\'s exact name above to search.</p>';
+    }
+    if (reportMinAgeInput) reportMinAgeInput.value = "21";
+    if (reportCountBadge) {
+        reportCountBadge.textContent = "Students Aged ≥ 21: 0";
+        reportCountBadge.classList.add("hidden");
+    }
+    if (reportResultsContainer) {
+        reportResultsContainer.innerHTML = '<p class="text-muted">Click \'Roster Report\' to display student records and counts.</p>';
+    }
+}
+
+/**
+ * Reset Part 3 (AI Assistant) inputs and results to their initial state.
+ */
+function resetAIAssistantTab() {
+    if (aiNotesTextarea) aiNotesTextarea.value = "";
+    if (aiSummarizeResults) {
+        aiSummarizeResults.innerHTML = '<p class="text-muted">Paste notes above and click \'Summarize Notes\' to generate output.</p>';
+    }
+    if (aiSearchQueryInput) aiSearchQueryInput.value = "";
+    if (aiSearchResults) {
+        aiSearchResults.innerHTML = '<p class="text-muted">Enter a query above to rank the 5 sample notes by similarity.</p>';
+    }
+}
+
+/**
+ * Reset Part 1 (Student Roster) filter input and reload all students.
+ */
+function resetStudentRosterTab() {
+    if (minAgeInput) {
+        minAgeInput.value = "";
+    }
+    hideError();
+    loadRoster();
+}
+
+// Tab Component Switching with automatic tab state reset
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabContents = document.querySelectorAll(".tab-content");
 
@@ -957,23 +1055,17 @@ tabButtons.forEach(btn => {
         if (targetContent) {
             targetContent.classList.remove("hidden");
         }
+
+        // Reset component state when switching tabs
+        if (targetTabId === "tab-part1") {
+            resetStudentRosterTab();
+        } else if (targetTabId === "tab-part2") {
+            resetAlgorithmsTab();
+        } else if (targetTabId === "tab-part3") {
+            resetAIAssistantTab();
+        }
     });
 });
-
-// Part 2 DOM Elements
-const sortBySelect = document.getElementById("sort-by-select");
-const runSortBtn = document.getElementById("run-sort-btn");
-const sortResultsContainer = document.getElementById("sort-results-container");
-
-const searchNameInput = document.getElementById("search-name-input");
-const runSearchBtn = document.getElementById("run-search-btn");
-const searchResultsContainer = document.getElementById("search-results-container");
-
-const reportMinAgeInput = document.getElementById("report-min-age-input");
-const runReportBtn = document.getElementById("run-report-btn");
-const reportCountBadge = document.getElementById("report-count-badge");
-const reportResultsContainer = document.getElementById("report-results-container");
-const reportOutputText = document.getElementById("report-output-text");
 
 // Part 2 Handler 1: Run Insertion Sort (GET /students/sorted?by=field)
 if (runSortBtn && sortBySelect) {
@@ -1168,13 +1260,6 @@ clearFilterBtn.addEventListener("click", () => {
 });
 
 // --- Part 3: AI Assistant Handlers ---
-const aiNotesTextarea = document.getElementById("ai-notes-textarea");
-const aiSummarizeBtn = document.getElementById("ai-summarize-btn");
-const aiSummarizeResults = document.getElementById("ai-summarize-results");
-
-const aiSearchQueryInput = document.getElementById("ai-search-query-input");
-const aiSearchBtn = document.getElementById("ai-search-btn");
-const aiSearchResults = document.getElementById("ai-search-results");
 
 // Part 3 Handler 1: Note Summarizer (POST /assistant/summarize)
 if (aiSummarizeBtn && aiNotesTextarea && aiSummarizeResults) {

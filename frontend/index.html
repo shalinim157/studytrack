@@ -73,10 +73,8 @@
             </div>
 
             
-            <section class="roster-section">
-                <div id="roster-list" class="roster-container">
-            
-                </div>
+            <section id="roster-list" class="roster-container roster-section">
+                <!-- Dynamic student cards rendered here -->
             </section>
         </div>
 
@@ -152,14 +150,13 @@
                 <div class="algo-card">
                     <div class="algo-card-header">
                         <h3>1. Note Summarizer</h3>
-                        <span class="badge badge-purple">Structured Output</span>
                     </div>
                     <p class="algo-desc">Paste raw study notes below to deterministically extract topic, key points, and difficulty rating.</p>
                     <div class="form-group">
                         <textarea id="ai-notes-textarea" class="textarea-input" rows="4" placeholder="Paste your study notes here..." autocomplete="off"></textarea>
                     </div>
                     <div class="algo-controls-row">
-                        <button id="ai-summarize-btn" class="btn btn-save">✨ Summarize Notes</button>
+                        <button id="ai-summarize-btn" class="btn btn-save">✨Summarize Notes</button>
                     </div>
                     <div id="ai-summarize-results" class="algo-results-box">
                         <p class="text-muted">Paste notes above and click 'Summarize Notes' to generate output.</p>
@@ -170,7 +167,6 @@
                 <div class="algo-card">
                     <div class="algo-card-header">
                         <h3>2. Semantic Search Engine</h3>
-                        <span class="badge badge-green">12D Mock Embeddings</span>
                     </div>
                     <p class="algo-desc">Search study notes using word-frequency embedding vectors and first-principles cosine similarity.</p>
                     <div class="algo-controls-row">
@@ -363,7 +359,7 @@
 
     <footer class="app-footer">
         <div class="footer-container">
-            <p>&copy; 2026 StudyTrack Service. Powered by FastAPI, SQLAlchemy &amp; Modern Web API.</p>
+            <p>&copy; 2026 StudyTrack Service. Powered by FastAPI &amp; Modern Web API.</p>
         </div>
     </footer>
 

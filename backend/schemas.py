@@ -1,8 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
-# --- Course Schemas ---
-
 class CourseCreate(BaseModel):
     student_id: int
     course_name: str
@@ -31,9 +29,6 @@ class CourseResponse(CourseCreate):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-# --- Student Schemas ---
-
 class StudentCreate(BaseModel):
     name: str
     email: str
@@ -61,15 +56,11 @@ class StudentUpdate(BaseModel):
 class StudentResponse(StudentCreate):
     id: int
     courses: List[CourseResponse] = []
-
     model_config = ConfigDict(from_attributes=True)
 
 class StudentCourseCountResponse(BaseModel):
     student_id: int
     course_count: int
-
-
-# --- AI Assistant Schemas ---
 
 class SummarizeRequest(BaseModel):
     text: str = Field(..., description="Raw study notes to summarize")

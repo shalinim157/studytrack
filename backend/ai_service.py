@@ -1,8 +1,3 @@
-"""
-AI Service Module for StudyTrack.
-Provides deterministic offline Note Summarization, Vocabulary Embedding, and Cosine Similarity Search.
-"""
-
 import math
 import re
 from collections import Counter
@@ -50,16 +45,6 @@ VOCABULARY = [
 
 
 def summarize_notes(raw_text: str) -> Dict[str, Any]:
-    """
-    Deterministically summarizes raw study notes into a fixed-shape JSON object containing
-    exactly three keys: 'topic', 'key_points', and 'difficulty'.
-    
-    Rule Specifications:
-    - Empty/whitespace input: Returns topic='untitled', key_points=[], difficulty='easy'.
-    - Topic: Derived from the first non-empty line (if <= 60 chars) or the most frequent non-trivial word (>= 3 chars).
-    - Key Points: List of up to 3 non-empty sentences split on [.!?], stripped of whitespace.
-    - Difficulty: Based on total word count thresholds (< 40 -> 'easy', 40..100 -> 'medium', > 100 -> 'hard').
-    """
     if not raw_text or not raw_text.strip():
         return {
             "topic": "untitled",
@@ -110,13 +95,6 @@ def summarize_notes(raw_text: str) -> Dict[str, Any]:
 
 
 def mock_embed(text: str) -> List[float]:
-    """
-    Turns any input string into a 12-dimensional numeric vector using exact whole-token word counts
-    against the fixed VOCABULARY.
-    
-    Tokenization: Lowercases input, splits on non-alphanumeric characters.
-    Output: Python list of exactly 12 floats in VOCABULARY order.
-    """
     if not text or not text.strip():
         return [0.0] * len(VOCABULARY)
 
@@ -129,13 +107,6 @@ def mock_embed(text: str) -> List[float]:
 
 
 def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
-    """
-    Computes cosine similarity between two numeric vectors from first principles:
-    dot_product(A, B) / (|A| * |B|)
-    
-    Zero-Vector Rule: If either vector has an L2 norm of 0.0, returns 0.0 directly
-    without raising a ZeroDivisionError.
-    """
     if not vec_a or not vec_b or len(vec_a) != len(vec_b):
         return 0.0
 
@@ -153,12 +124,6 @@ def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
 
 
 def search_notes_by_query(query: str) -> List[Dict[str, Any]]:
-    """
-    Embeds all sample notes and the incoming query using mock_embed, computes cosine similarity,
-    and returns notes sorted by score descending, each annotated with its computed score.
-    
-    If query embeds to an all-zero vector, returns all notes with score 0.0 in original id order.
-    """
     query_vec = mock_embed(query)
     query_norm = math.sqrt(sum(q * q for q in query_vec))
 

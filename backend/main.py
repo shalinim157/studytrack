@@ -1,13 +1,11 @@
 import os
 from typing import List, Optional
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, Depends, HTTPException, status, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-
 from backend.database import Base, engine, get_db
 from backend.schemas import (
     StudentCreate,
@@ -28,14 +26,11 @@ from backend.algorithms import (
     format_roster_report,
     count_students_meeting_min_age,
 )
-from backend.ai_service import (
-    summarize_notes,
-    search_notes_by_query,
-)
+from backend.ai_service import (summarize_notes,search_notes_by_query)
+from backend.models import Student, Course
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Create tables and seed data
     Base.metadata.create_all(bind=engine)
     db = next(get_db())
     try:
@@ -44,13 +39,8 @@ async def lifespan(app: FastAPI):
         db.close()
     yield
 
-app = FastAPI(
-    title="StudyTrack Service API",
-    description="RESTful CRUD API for managing Students and Course Enrollments.",
-    version="1.0.0",
-    lifespan=lifespan,
-)
-
+app = FastAPI(title="StudyTrack Service API",
+    description="RESTful CRUD API for managing Students and Course Enrollments.",version="1.0.0",lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,32 +57,25 @@ app.add_middleware(
 
 @app.post("/students/",response_model=StudentResponse,status_code=status.HTTP_201_CREATED,summary="Create a new student",)
 def create_student_endpoint(student: StudentCreate, db: Session = Depends(get_db)):
-    
     existing = crud.get_student_by_email(db, student.email)
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"A student with email '{student.email}' already exists.",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"A student with email '{student.email}' already exists.")
     try:
         return crud.create_student(db=db, student=student)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Database integrity error. Email must be unique.",
-        )
+            status_code=status.HTTP_400_BAD_REQUEST,detail="Database integrity error. Email must be unique.",)
 
 @app.get("/students/",response_model=List[StudentResponse],summary="List all students (with optional min_age filter)",)
 def list_students_endpoint(min_age: Optional[int] = Query(None, description="Filter students with age >= min_age"),db: Session = Depends(get_db),):
-    from backend.models import Student
+    
     if db.query(Student).count() == 0:
         seed_database(db)
     return crud.get_students(db=db, min_age=min_age)
 
 @app.post("/students/reseed", summary="Clear and re-seed the default 8-student roster dataset")
 def reseed_database_endpoint(db: Session = Depends(get_db)):
-    from backend.models import Student, Course
     db.query(Course).delete()
     db.query(Student).delete()
     db.commit()
@@ -100,19 +83,17 @@ def reseed_database_endpoint(db: Session = Depends(get_db)):
     return {"message": "Database successfully re-seeded with original 8-student dataset."}
 
 
-@app.get("/students/sorted",response_model=List[StudentResponse],summary="Get students sorted by age or name using hand-written Insertion Sort",)
+@app.get("/students/sorted",response_model=List[StudentResponse],summary="Get students sorted by age or name using Insertion Sort",)
 def get_sorted_students(by: str = Query("age", description="Field to sort by ('age' or 'name')"),db: Session = Depends(get_db),):
     if by not in ("age", "name"):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Query parameter 'by' must be 'age' or 'name'.",
-        )
+            status_code=status.HTTP_400_BAD_REQUEST,detail="Query parameter 'by' must be 'age' or 'name'.",)
     students_orm = crud.get_students(db=db)
     students_dicts = [StudentResponse.model_validate(s).model_dump() for s in students_orm]
     sorted_dicts = insertion_sort_by_field(students_dicts, field=by)
     return sorted_dicts
 
-@app.get("/students/search",response_model=StudentResponse,summary="Search student by exact name using hand-written Binary Search",)
+@app.get("/students/search",response_model=StudentResponse,summary="Search student by exact name using Binary Search",)
 def search_student_by_name(name: str = Query(..., description="Exact student name to search for"),db: Session = Depends(get_db),):
     students_orm = crud.get_students(db=db)
     students_dicts = [StudentResponse.model_validate(s).model_dump() for s in students_orm]
@@ -120,13 +101,11 @@ def search_student_by_name(name: str = Query(..., description="Exact student nam
     result = binary_search_by_name(name_sorted_students, name=name)
     if result == -1 or isinstance(result, int):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student with name '{name}' not found.",
-        )
+            status_code=status.HTTP_404_NOT_FOUND,detail=f"Student with name '{name}' not found.",)
     return result
 
 @app.get("/students/report",summary="Generate Roster Report and count students meeting minimum age",)
-def get_roster_report(min_age: int = Query(21, description="Minimum age filter for report"),    db: Session = Depends(get_db),):
+def get_roster_report(min_age: int = Query(21, description="Minimum age filter for report"),db: Session = Depends(get_db),):
     students_orm = crud.get_students(db=db)
     students_dicts = [StudentResponse.model_validate(s).model_dump() for s in students_orm]
     report_text = format_roster_report(students_dicts)
@@ -142,8 +121,7 @@ def get_student_endpoint(student_id: int, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student with ID {student_id} not found.",
-        )
+            detail=f"Student with ID {student_id} not found.",)
     return student
 
 @app.patch("/students/{student_id}",response_model=StudentResponse,summary="Partially update student record",)
@@ -153,15 +131,12 @@ def update_student_endpoint(student_id: int,student_update: StudentUpdate,db: Se
         if existing and existing.id != student_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Email '{student_update.email}' is already in use by another student.",
-            )
+                detail=f"Email '{student_update.email}' is already in use by another student.",)
     
     updated_student = crud.update_student(db=db, student_id=student_id, student_update=student_update)
     if not updated_student:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student with ID {student_id} not found.",
-        )
+            status_code=status.HTTP_404_NOT_FOUND,detail=f"Student with ID {student_id} not found.",)
     return updated_student
 
 @app.delete("/students/{student_id}",status_code=status.HTTP_200_OK,summary="Delete a student record",)
@@ -169,9 +144,7 @@ def delete_student_endpoint(student_id: int, db: Session = Depends(get_db)):
     success = crud.delete_student(db=db, student_id=student_id)
     if not success:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Student with ID {student_id} not found.",
-        )
+            status_code=status.HTTP_404_NOT_FOUND,detail=f"Student with ID {student_id} not found.",)
     return {"message": f"Student with ID {student_id} successfully deleted."}
 
 @app.get("/students/{student_id}/course-count",response_model=StudentCourseCountResponse,summary="Get course count for a student via DB aggregate query",)
@@ -191,23 +164,20 @@ def create_course_endpoint(course: CourseCreate, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Cannot enroll course: Student with ID {course.student_id} does not exist.",
-        )
+            detail=f"Cannot enroll course: Student with ID {course.student_id} does not exist.",)
     
     existing_enrollment = crud.get_student_course_by_name(db, course.student_id, course.course_name)
     if existing_enrollment:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Student '{student.name}' is already enrolled in '{course.course_name}'. A student cannot be enrolled in the same course twice.",
-        )
+            detail=f"Student '{student.name}' is already enrolled in '{course.course_name}'. A student cannot be enrolled in the same course twice.",)
     try:
         return crud.create_course(db=db, course=course)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Student '{student.name}' is already enrolled in '{course.course_name}'.",
-        )
+            detail=f"Student '{student.name}' is already enrolled in '{course.course_name}'.",)
 
 @app.get("/courses/",response_model=List[CourseResponse],summary="List all courses",)
 def list_courses_endpoint(db: Session = Depends(get_db)):
@@ -217,59 +187,35 @@ def list_courses_endpoint(db: Session = Depends(get_db)):
 def get_course_endpoint(course_id: int, db: Session = Depends(get_db)):
     course = crud.get_course(db=db, course_id=course_id)
     if not course:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Course with ID {course_id} not found.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Course with ID {course_id} not found.",)
     return course
 
-@app.patch(
-    "/courses/{course_id}",
-    response_model=CourseResponse,
-    summary="Partially update course details",
-)
-def update_course_endpoint(
-    course_id: int,
-    course_update: CourseUpdate,
-    db: Session = Depends(get_db),
-):
+@app.patch("/courses/{course_id}",response_model=CourseResponse,summary="Partially update course details",)
+def update_course_endpoint(course_id: int,course_update: CourseUpdate,db: Session = Depends(get_db),):
     updated_course = crud.update_course(db=db, course_id=course_id, course_update=course_update)
     if not updated_course:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Course with ID {course_id} not found.",
-        )
+            detail=f"Course with ID {course_id} not found.",)
     return updated_course
 
 @app.delete("/courses/{course_id}",status_code=status.HTTP_200_OK,summary="Delete a course enrollment",)
 def delete_course_endpoint(course_id: int, db: Session = Depends(get_db)):
     success = crud.delete_course(db=db, course_id=course_id)
     if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Course with ID {course_id} not found.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"Course with ID {course_id} not found.",)
     return {"message": f"Course with ID {course_id} successfully deleted."}
 
 
-
-# --- Part 3: AI Assistant Endpoints ---
-
-@app.post(
-    "/assistant/summarize",
-    response_model=SummarizeResponse,
-    summary="Summarize raw study notes into a fixed-shape JSON object",
-)
+@app.post("/assistant/summarize",response_model=SummarizeResponse,summary="Summarize raw study notes into a fixed-shape JSON object",)
 def summarize_assistant_endpoint(payload: SummarizeRequest):
     return summarize_notes(raw_text=payload.text)
 
-@app.get(
-    "/assistant/search",
-    summary="Rank sample study notes using mock embeddings and cosine similarity",
-)
-def search_assistant_endpoint(
-    query: str = Query("", description="Query text to rank study notes against")
-):
+@app.get("/assistant/search",summary="Rank sample study notes using mock embeddings and cosine similarity",)
+def search_assistant_endpoint(query: str = Query("", description="Query text to rank study notes against")):
     return search_notes_by_query(query=query)
 
 
-# --- Static Files Mount (Single-process mode: MUST be mounted last) ---
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="static")

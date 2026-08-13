@@ -1,15 +1,11 @@
-
 from typing import List, Dict, Any, Union
 
-
-def insertion_sort_by_field(students: List[Dict[str, Any]], field: str = "age") -> List[Dict[str, Any]]:
-    
+def insertion_sort_by_field(students: List[Dict[str, Any]], field: str = "age") -> List[Dict[str, Any]]:    
     n = len(students)
     for i in range(1, n):
         key_item = students[i]
         key_value = key_item.get(field)
         j = i - 1
-        
         # Shift elements of students[0..i-1] that are greater than key_value to one position ahead
         while j >= 0 and students[j].get(field) > key_value:
             students[j + 1] = students[j]
