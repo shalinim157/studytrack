@@ -44,17 +44,11 @@ app = FastAPI(title="StudyTrack Service API",
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 @app.post("/students/",response_model=StudentResponse,status_code=status.HTTP_201_CREATED,summary="Create a new student",)
 def create_student_endpoint(student: StudentCreate, db: Session = Depends(get_db)):
     existing = crud.get_student_by_email(db, student.email)

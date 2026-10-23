@@ -1,7 +1,7 @@
 // Universal API Base URL: Uses relative URL if served from port 8000, otherwise falls back to http://127.0.0.1:8000
-const API_BASE_URL = (window.location.origin && window.location.origin.includes(":8000"))
-    ? ""
-    : "http://127.0.0.1:8000";
+const isLiveServer = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && window.location.port === "5500";
+const API_BASE_URL = isLiveServer ? "http://127.0.0.1:8000" : "";
+
 
 const rosterList = document.getElementById("roster-list");
 const studentForm = document.getElementById("student-form");
@@ -147,7 +147,8 @@ async function fetchAPI(url, options = {}) {
         const response = await fetch(API_BASE_URL + url, {
             headers: {
                 "Content-Type": "application/json",
-                ...options.headers,},...options,
+                ...options.headers,
+            }, ...options,
         });
 
         if (!response.ok) {
@@ -282,7 +283,7 @@ function createStudentCardElement(student) {
 
     const ageDisplayRow = document.createElement("div");
     ageDisplayRow.className = "info-item";
-    
+
     const ageText = document.createElement("span");
     ageText.className = "age-text-label";
     ageText.textContent = `🎂Age: ${student.age}`;
@@ -417,7 +418,7 @@ async function loadRoster(minAge = null) {
             endpoint += `?min_age=${encodeURIComponent(minAge)}`;
         }
         allStudents = await fetchAPI(endpoint);
-        
+
         // Update student and course dropdown options in Map Course modal
         updateMapModalDropdowns(allStudents);
 
@@ -439,10 +440,10 @@ rosterList.addEventListener("click", async (event) => {
     if (editBtn) {
         const studentId = parseInt(editBtn.getAttribute("data-id"), 10);
         const card = editBtn.closest(".student-card");
-        
+
         // Find latest student record in state or read from card elements
         const currentStudent = allStudents.find(s => s.id === studentId);
-        
+
         const name = currentStudent ? currentStudent.name : (editBtn.getAttribute("data-name") || "");
         const email = currentStudent ? currentStudent.email : (editBtn.getAttribute("data-email") || "");
         const age = currentStudent ? currentStudent.age : (card?.querySelector(".inline-age-input")?.value || editBtn.getAttribute("data-age") || "");
@@ -517,7 +518,7 @@ rosterList.addEventListener("click", async (event) => {
         const courseId = removeCourseBtn.getAttribute("data-course-id");
         const courseName = removeCourseBtn.getAttribute("data-course-name") || "Course";
         const studentName = removeCourseBtn.getAttribute("data-student-name") || "student";
-        
+
         try {
             await fetchAPI(`/courses/${courseId}`, {
                 method: "DELETE",
@@ -1069,7 +1070,7 @@ const tabContents = document.querySelectorAll(".tab-content");
 tabButtons.forEach(btn => {
     btn.addEventListener("click", () => {
         const targetTabId = btn.getAttribute("data-tab");
-        
+
         tabButtons.forEach(b => b.classList.remove("active"));
         tabContents.forEach(c => c.classList.add("hidden"));
 
@@ -1096,7 +1097,7 @@ if (runSortBtn && sortBySelect) {
         const field = sortBySelect.value || "age";
         try {
             const sortedStudents = await fetchAPI(`/students/sorted?by=${encodeURIComponent(field)}`);
-            
+
             // Update Part 1 Roster list so Part 1 tab reflects the sorted order
             renderRoster(sortedStudents);
 
@@ -1146,7 +1147,7 @@ if (runSearchBtn && searchNameInput) {
 
         try {
             const matchedStudent = await fetchAPI(`/students/search?name=${encodeURIComponent(searchName)}`);
-            
+
             if (searchResultsContainer) {
                 const courseNames = matchedStudent.courses && matchedStudent.courses.length > 0
                     ? matchedStudent.courses.map(c => `${c.course_name} (${c.credits} cr)`).join(", ")
@@ -1198,7 +1199,7 @@ if (runReportBtn && reportMinAgeInput) {
         try {
             const reportData = await fetchAPI(`/students/report?min_age=${minAgeVal}`);
             const studentsList = await fetchAPI("/students/");
-            
+
             // Filter to ONLY students meeting age >= minAgeVal
             const matchingStudents = studentsList.filter(s => s.age >= minAgeVal);
 
@@ -1296,8 +1297,8 @@ if (aiSummarizeBtn && aiNotesTextarea && aiSummarizeResults) {
                 body: JSON.stringify({ text: rawText })
             });
 
-            const diffBadgeClass = summary.difficulty === "easy" 
-                ? "badge-green" 
+            const diffBadgeClass = summary.difficulty === "easy"
+                ? "badge-green"
                 : (summary.difficulty === "medium" ? "badge-blue" : "badge-purple");
 
             const keyPointsHtml = summary.key_points && summary.key_points.length > 0
